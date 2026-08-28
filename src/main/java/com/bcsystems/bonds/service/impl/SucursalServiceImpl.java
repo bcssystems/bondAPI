@@ -44,6 +44,10 @@ public class SucursalServiceImpl implements SucursalService {
     @Transactional
     @Override
     public SucursalResponse crear(SucursalRequest request) {
+        if (sucursalRepository.count() >= 1) {
+            throw new InvalidEntryException("El sistema solo admite una sucursal registrada");
+        }
+
         if (sucursalRepository.existsByNombreIgnoreCase(request.nombre())) {
             throw new InvalidEntryException("Ya existe una sucursal con ese nombre");
         }

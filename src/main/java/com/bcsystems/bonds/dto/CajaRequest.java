@@ -5,5 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 public record CajaRequest(
         @NotBlank String nombre,
-        @NotNull Integer idSucursal
+        @NotNull Integer idSucursal,
+        String tipo
 ) {}

@@ -14,9 +14,21 @@ public record ClienteResponse(
         String regimenFiscal,
         String cp,
         String direccion,
+        String calle,
+        String numExt,
+        String numInt,
+        String colonia,
+        String municipio,
+        String estado,
+        String rfc,
+        String representanteLegal,
+        String direccionEntrega,
         Boolean activo,
         LocalDateTime fechaRegistro,
         Boolean tieneCredito,
         Double limiteCredito,
-        Double saldoActual
+        Double saldoActual,
+        Boolean enListaNegra,
+        LocalDateTime fechaListaNegra,
+        String motivoListaNegra
 ) {}

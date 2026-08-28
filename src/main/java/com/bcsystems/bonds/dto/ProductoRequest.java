@@ -8,28 +8,10 @@ public record ProductoRequest(
     String sku,
     @NotBlank String nombre,
     String descripcion,
-    Double precio1,
-    Double precio2,
-    Double precio3,
-    Double precio4,
+    Double precioBase,
     Double costoPromedio,
+    String unidadMedida,
+    Double metrosPorRollo,
     Boolean activo,
-    Boolean tieneVariantes,
-    Integer idProductoPadre,
-    List<VarianteRequest> variantes,
     List<InventarioSucursalRequest> inventarios
-) {
-    public record VarianteRequest(
-        Integer idVariante,
-        String sku,
-        String nombre,
-        List<Integer> idAtributoValores,
-        Double precio1,
-        Double precio2,
-        Double precio3,
-        Double precio4,
-        Boolean precioPersonalizado,
-        Double costoPromedio,
-        List<InventarioSucursalRequest> inventarios
-    ) {}
-}
+) {}

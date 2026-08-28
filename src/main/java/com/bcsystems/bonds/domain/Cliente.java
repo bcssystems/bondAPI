@@ -50,11 +50,45 @@ public class Cliente {
     @Column(length = 500)
     private String direccion;
 
+    @Column(length = 200)
+    private String calle;
+
+    @Column(length = 20)
+    private String numExt;
+
+    @Column(length = 20)
+    private String numInt;
+
+    @Column(length = 150)
+    private String colonia;
+
+    @Column(length = 150)
+    private String municipio;
+
+    @Column(length = 100)
+    private String estado;
+
+    @Column(length = 13)
+    private String rfc;
+
+    @Column(length = 150)
+    private String representanteLegal;
+
+    @Column(length = 500)
+    private String direccionEntrega;
+
     private Boolean tieneCredito;
 
     private Double limiteCredito;
 
     private Double saldoActual;
+
+    private Boolean enListaNegra;
+
+    private LocalDateTime fechaListaNegra;
+
+    @Column(length = 300)
+    private String motivoListaNegra;
 
     @Column(nullable = false)
     private Boolean activo;

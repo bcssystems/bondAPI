@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     @Query("SELECT c FROM Cliente c WHERE " +
            "(:search IS NULL OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
@@ -20,4 +22,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     @Query("SELECT c FROM Cliente c WHERE c.tieneCredito = true AND c.activo = true ORDER BY c.nombre")
     Page<Cliente> findCreditClients(Pageable pageable);
+
+    @Query("SELECT c FROM Cliente c WHERE c.enListaNegra = true AND c.activo = true ORDER BY c.fechaListaNegra DESC")
+    List<Cliente> findByEnListaNegraTrueOrderByFechaListaNegraDesc();
 }

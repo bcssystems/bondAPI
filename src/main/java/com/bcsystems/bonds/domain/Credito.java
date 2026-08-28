@@ -21,6 +21,9 @@ public class Credito {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idCredito;
 
+    @Column(unique = true, length = 20)
+    private String folio;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_venta", nullable = false, unique = true)
     private Venta venta;

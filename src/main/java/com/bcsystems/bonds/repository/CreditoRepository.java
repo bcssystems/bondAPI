@@ -7,10 +7,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CreditoRepository extends JpaRepository<Credito, Integer> {
 
+    Optional<Credito> findByVentaIdVenta(Integer idVenta);
+
     List<Credito> findByClienteIdClienteAndEstadoOrderByFechaCreacionDesc(Integer idCliente, EstadoCredito estado);
+
+    boolean existsByFolio(String folio);
 
     List<Credito> findByClienteIdClienteOrderByFechaCreacionDesc(Integer idCliente);
 

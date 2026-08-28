@@ -189,7 +189,7 @@ public class PromocionServiceImpl implements PromocionService {
             var producto = productoRepository.findById(request.idProducto())
                     .orElse(null);
             if (producto != null) {
-                Double basePrice = producto.getPrecio1() != null ? producto.getPrecio1() : 0;
+                Double basePrice = producto.getPrecioBase() != null ? producto.getPrecioBase() : 0;
                 sugerido = basePrice * (1 - desc / 100);
             } else {
                 sugerido = 0.0;
@@ -198,7 +198,7 @@ public class PromocionServiceImpl implements PromocionService {
             sugerido = request.detalles().stream()
                     .mapToDouble(d -> {
                         var prod = productoRepository.findById(d.idProducto()).orElse(null);
-                        double base = (prod != null && prod.getPrecio1() != null) ? prod.getPrecio1() : 0;
+                        double base = (prod != null && prod.getPrecioBase() != null) ? prod.getPrecioBase() : 0;
                         return base * (d.cantidad() != null ? d.cantidad() : 1);
                     })
                     .sum() * (1 - desc / 100);

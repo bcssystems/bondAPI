@@ -32,14 +32,8 @@ public class Producto {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    private Double precio1;
-    private Double precio2;
-    private Double precio3;
-    private Double precio4;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean precioPersonalizado = false;
+    @Column(name = "precio1")
+    private Double precioBase;
 
     @Builder.Default
     @Column(nullable = false)
@@ -51,12 +45,10 @@ public class Producto {
     private Double costoPromedio;
 
     @Builder.Default
-    @Column(nullable = false)
-    private Boolean tieneVariantes = false;
+    @Column(length = 10)
+    private String unidadMedida = "UNIDAD";
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_producto_padre")
-    private Producto productoPadre;
+    private Double metrosPorRollo;
 
     @Builder.Default
     @Column(nullable = false)
@@ -77,8 +69,4 @@ public class Producto {
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<InventarioSucursal> inventarioSucursales = new ArrayList<>();
-
-    @OneToMany(mappedBy = "productoVariante", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<ProductoVarianteAtributo> varianteAtributos = new ArrayList<>();
 }

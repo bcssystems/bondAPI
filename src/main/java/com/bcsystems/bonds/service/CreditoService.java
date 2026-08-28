@@ -13,4 +13,6 @@ public interface CreditoService {
     AbonoResponse registrarAbono(AbonoRequest request);
 
     List<AbonoResponse> abonarATodas(AbonoGeneralRequest request);
+
+    EstadoCuentaResponse estadoCuenta(Integer idCredito);
 }

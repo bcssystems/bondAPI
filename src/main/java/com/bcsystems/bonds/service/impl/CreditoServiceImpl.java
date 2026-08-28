@@ -25,6 +25,7 @@ public class CreditoServiceImpl implements CreditoService {
     private final AbonoRepository abonoRepository;
     private final ClienteRepository clienteRepository;
     private final PersonaRepository personaRepository;
+    private final com.bcsystems.bonds.service.ConfiguracionService configuracionService;
 
     @Override
     public List<CreditoResponse> listarCreditosPorCliente(Integer idCliente) {
@@ -179,6 +180,42 @@ public class CreditoServiceImpl implements CreditoService {
         return resultados;
     }
 
+    @Override
+    public EstadoCuentaResponse estadoCuenta(Integer idCredito) {
+        Credito credito = creditoRepository.findById(idCredito)
+                .orElseThrow(() -> new NotFoundException("Credito no encontrado"));
+
+        List<AbonoResponse> abonos = abonoRepository.findByCreditoIdCreditoOrderByFechaDesc(idCredito).stream()
+                .map(a -> new AbonoResponse(
+                        a.getIdAbono(), a.getCredito().getIdCredito(),
+                        a.getMonto(), a.getTipo().name(),
+                        a.getFecha(), a.getUsuario().getUsuario()))
+                .toList();
+
+        List<MovimientoCreditoResponse> movimientos = movimientoCreditoRepository
+                .findByCreditoIdCreditoOrderByFechaDesc(idCredito).stream()
+                .map(this::toMovimientoResponse).toList();
+
+        Cliente c = credito.getCliente();
+        ClienteResponse clienteResponse = new ClienteResponse(
+                c.getIdCliente(), c.getNombre(), c.getApellidoPaterno(), c.getApellidoMaterno(),
+                c.getTelefono(), c.getCodigoPais(), c.getWhatsapp(), c.getEmpresa(),
+                c.getRegimenFiscal(), c.getCp(), c.getDireccion(),
+                c.getCalle(), c.getNumExt(), c.getNumInt(), c.getColonia(),
+                c.getMunicipio(), c.getEstado(),
+                c.getRfc(), c.getRepresentanteLegal(), c.getDireccionEntrega(),
+                c.getActivo(), c.getFechaRegistro(),
+                c.getTieneCredito(), c.getLimiteCredito(), c.getSaldoActual(),
+                c.getEnListaNegra(), c.getFechaListaNegra(), c.getMotivoListaNegra());
+
+        String titular = configuracionService.getValor("titularPagare", "PRISCILA ARONG KIM LOPEZ");
+        double tasaMora = configuracionService.getValorDouble("tasaInteresMoraPagare", 5.0);
+
+        return new EstadoCuentaResponse(
+                toCreditoResponse(credito), clienteResponse,
+                abonos, movimientos, titular, tasaMora);
+    }
+
     private Persona obtenerPersonaActual() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return personaRepository.findByUsuario(username)
@@ -189,6 +226,7 @@ public class CreditoServiceImpl implements CreditoService {
         return new CreditoResponse(
                 c.getIdCredito(), c.getVenta().getIdVenta(),
                 c.getVenta().getIdVenta(),
+                c.getFolio(),
                 c.getCliente().getIdCliente(),
                 c.getCliente().getNombre() + " " + c.getCliente().getApellidoPaterno(),
                 c.getMontoOriginal(), c.getSaldoPendiente(),

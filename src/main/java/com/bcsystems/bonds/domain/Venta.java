@@ -51,11 +51,26 @@ public class Venta {
     private Double total;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 32)
     private EstadoVenta estado;
 
     @Column(length = 500)
     private String nota;
+
+    @Column(length = 500)
+    private String motivoCancelacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_solicitante_cancelacion")
+    private Persona solicitanteCancelacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_autorizador_cancelacion")
+    private Persona autorizadorCancelacion;
+
+    private LocalDateTime fechaSolicitudCancelacion;
+
+    private LocalDateTime fechaAutorizacionCancelacion;
 
     @Column(updatable = false)
     private LocalDateTime fecha;

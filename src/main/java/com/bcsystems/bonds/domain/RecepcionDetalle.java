@@ -11,28 +11,30 @@ import org.hibernate.envers.Audited;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "pedido_detalle")
-public class PedidoDetalle {
+@Table(name = "recepcion_detalle")
+public class RecepcionDetalle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer idPedidoDetalle;
+    private Integer idRecepcionDetalle;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_pedido", nullable = false)
-    private Pedido pedido;
+    @JoinColumn(name = "id_recepcion", nullable = false)
+    private Recepcion recepcion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_producto", nullable = false)
     private Producto producto;
 
     @Column(nullable = false)
-    private Integer cantidadPedida;
+    private Integer metros;
 
     @Column(nullable = false)
-    private Double precioCompraUnitario;
+    private Integer rollos;
 
-    private Integer cantidadRecibida;
+    @Column(nullable = false)
+    private Double precioCompra;
 
-    private Double costoUltimo;
+    @Column(nullable = false)
+    private Double subtotal;
 }

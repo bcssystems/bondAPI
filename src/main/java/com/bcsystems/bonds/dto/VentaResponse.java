@@ -21,5 +21,11 @@ public record VentaResponse(
         String nota,
         LocalDateTime fecha,
         List<VentaDetalleResponse> detalles,
-        List<VentaPagoResponse> pagos
+        List<VentaPagoResponse> pagos,
+        String folioPagare,
+        Integer plazoMeses,
+        Double porcentajeInteres,
+        String motivoCancelacion,
+        String solicitanteCancelacion,
+        LocalDateTime fechaSolicitudCancelacion
 ) {}

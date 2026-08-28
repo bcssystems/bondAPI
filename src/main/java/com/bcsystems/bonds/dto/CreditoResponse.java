@@ -8,6 +8,7 @@ public record CreditoResponse(
         Integer idCredito,
         Integer idVenta,
         Integer folioVenta,
+        String folio,
         Integer idCliente,
         String clienteNombre,
         Double montoOriginal,

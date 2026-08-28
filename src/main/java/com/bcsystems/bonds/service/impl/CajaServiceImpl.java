@@ -54,8 +54,12 @@ public class CajaServiceImpl implements CajaService {
         Sucursal sucursal = sucursalRepository.findById(request.idSucursal())
                 .orElseThrow(() -> new NotFoundException("Sucursal no encontrada"));
 
+        TipoCaja tipo = request.tipo() != null ? TipoCaja.valueOf(request.tipo()) : TipoCaja.NORMAL;
+        validarCajaUnica(sucursal, tipo, null);
+
         Caja caja = Caja.builder()
                 .nombre(request.nombre())
+                .tipo(tipo)
                 .sucursal(sucursal)
                 .estado(CajaEstado.CERRADA)
                 .saldoActual(0.0)
@@ -76,8 +80,11 @@ public class CajaServiceImpl implements CajaService {
         Caja caja = buscarOExcepcion(id);
         Sucursal sucursal = sucursalRepository.findById(request.idSucursal())
                 .orElseThrow(() -> new NotFoundException("Sucursal no encontrada"));
+        TipoCaja tipo = request.tipo() != null ? TipoCaja.valueOf(request.tipo()) : TipoCaja.NORMAL;
+        validarCajaUnica(sucursal, tipo, id);
         caja.setNombre(request.nombre());
         caja.setSucursal(sucursal);
+        caja.setTipo(tipo);
         caja = cajaRepository.save(caja);
 
         String usuario = obtenerUsuarioActual();
@@ -376,6 +383,16 @@ public class CajaServiceImpl implements CajaService {
         }
     }
 
+    private void validarCajaUnica(Sucursal sucursal, TipoCaja tipo, Integer idExcluir) {
+        boolean existe = cajaRepository.findBySucursalIdSucursalAndActivaTrue(sucursal.getIdSucursal()).stream()
+                .anyMatch(c -> c.getTipo() == tipo
+                        && (idExcluir == null || !c.getIdCaja().equals(idExcluir)));
+        if (existe) {
+            throw new InvalidEntryException("Ya existe una caja " + tipo.name().toLowerCase()
+                    + " activa en la sucursal " + sucursal.getNombre());
+        }
+    }
+
     private String obtenerUsuarioActual() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
@@ -389,6 +406,7 @@ public class CajaServiceImpl implements CajaService {
     private CajaResponse toResponse(Caja caja) {
         return new CajaResponse(
                 caja.getIdCaja(), caja.getNombre(),
+                caja.getTipo() != null ? caja.getTipo().name() : "NORMAL",
                 caja.getSucursal().getIdSucursal(),
                 caja.getSucursal().getNombre(),
                 caja.getEstado().name(),

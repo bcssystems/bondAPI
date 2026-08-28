@@ -1,5 +1,6 @@
 package com.bcsystems.bonds.controller;
 
+import com.bcsystems.bonds.dto.SolicitudCancelacionRequest;
 import com.bcsystems.bonds.dto.VentaRequest;
 import com.bcsystems.bonds.dto.VentaResponse;
 import com.bcsystems.bonds.service.VentaService;
@@ -59,6 +60,17 @@ public class VentaController {
     @PostMapping("/{id}/cancelar")
     public ResponseEntity<VentaResponse> cancelar(@PathVariable Integer id) {
         return ResponseEntity.ok(ventaService.cancelar(id));
+    }
+
+    @PostMapping("/{id}/solicitar-cancelacion")
+    public ResponseEntity<VentaResponse> solicitarCancelacion(
+            @PathVariable Integer id, @Valid @RequestBody SolicitudCancelacionRequest request) {
+        return ResponseEntity.ok(ventaService.solicitarCancelacion(id, request.motivo()));
+    }
+
+    @PostMapping("/{id}/rechazar-cancelacion")
+    public ResponseEntity<VentaResponse> rechazarCancelacion(@PathVariable Integer id) {
+        return ResponseEntity.ok(ventaService.rechazarCancelacion(id));
     }
 
     @PostMapping("/{id}/espera")

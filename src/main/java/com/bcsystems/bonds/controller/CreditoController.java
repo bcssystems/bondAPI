@@ -40,6 +40,11 @@ public class CreditoController {
         return ResponseEntity.ok(creditoService.listarMovimientosPorCliente(id));
     }
 
+    @GetMapping("/{id}/estado-cuenta")
+    public ResponseEntity<EstadoCuentaResponse> estadoCuenta(@PathVariable Integer id) {
+        return ResponseEntity.ok(creditoService.estadoCuenta(id));
+    }
+
     @PostMapping("/abonos")
     public ResponseEntity<AbonoResponse> registrarAbono(@Valid @RequestBody AbonoRequest request) {
         return ResponseEntity.ok(creditoService.registrarAbono(request));

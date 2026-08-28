@@ -13,6 +13,15 @@ public record ClienteRequest(
         @NotBlank String regimenFiscal,
         String cp,
         String direccion,
+        String calle,
+        String numExt,
+        String numInt,
+        String colonia,
+        String municipio,
+        String estado,
+        String rfc,
+        String representanteLegal,
+        String direccionEntrega,
         Boolean tieneCredito,
         Double limiteCredito
 ) {}
