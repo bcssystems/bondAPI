@@ -21,7 +21,7 @@ public class CodigoGeneratorService {
 
     public String generarSku() {
         long count = productoRepository.count();
-        String prefix = "SOM";
+        String prefix = "BOND";
         String number = String.format("%05d", count + 1);
         String sku = prefix + number;
 
