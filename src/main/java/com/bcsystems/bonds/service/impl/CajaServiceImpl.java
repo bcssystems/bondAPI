@@ -30,6 +30,7 @@ public class CajaServiceImpl implements CajaService {
     private final VentaPagoRepository ventaPagoRepository;
     private final CorteDetallePagoRepository corteDetallePagoRepository;
     private final TipoPagoRepository tipoPagoRepository;
+    private final GastoRepository gastoRepository;
 
     @Override
     public List<CajaResponse> listar() {
@@ -228,8 +229,13 @@ public class CajaServiceImpl implements CajaService {
                 .filter(m -> m.getTipo() == TipoMovimientoCaja.EGRESO)
                 .mapToDouble(MovimientoCaja::getMonto).sum();
 
-        double saldoInicial = caja.getSaldoActual() - totalIngresos + totalEgresos - totalContado;
-        double saldoEsperado = saldoInicial + totalVentas + totalIngresos - totalEgresos;
+        List<Gasto> gastosPeriodo = gastoRepository
+                .findByCajaIdCajaAndFechaAutorizacionBetweenOrderByFechaAutorizacionAsc(id, apertura, ahora);
+        double totalGastos = gastosPeriodo.stream()
+                .mapToDouble(Gasto::getMonto).sum();
+
+        double saldoInicial = caja.getSaldoActual() - totalIngresos + totalEgresos + totalGastos - totalContado;
+        double saldoEsperado = saldoInicial + totalVentas + totalIngresos - totalEgresos - totalGastos;
 
         List<VentaPago> pagosEnRango = ventaPagoRepository.findByCajaAndFechaRange(id, apertura, ahora);
         List<CorteDetallePagoDto> detallePagos = pagosEnRango.stream()
@@ -252,9 +258,10 @@ public class CajaServiceImpl implements CajaService {
                 caja.getSucursal().getIdSucursal(), caja.getSucursal().getNombre(),
                 saldoInicial,
                 totalVentas, totalContado, totalCredito,
-                totalIngresos, totalEgresos, caja.getSaldoActual(),
+                totalIngresos, totalEgresos, totalGastos, caja.getSaldoActual(),
                 saldoEsperado,
                 apertura, ahora, obtenerUsuarioActual(), detallePagos,
+                gastosPeriodo.stream().map(this::toGastoResponse).toList(),
                 totalReal, diferencia);
     }
 
@@ -309,10 +316,11 @@ public class CajaServiceImpl implements CajaService {
                 caja.getSucursal().getIdSucursal(), caja.getSucursal().getNombre(),
                 preview.saldoInicial(), preview.totalVentas(),
                 preview.totalVentasContado(), preview.totalVentasCredito(),
-                preview.totalIngresos(), preview.totalEgresos(),
+                preview.totalIngresos(), preview.totalEgresos(), preview.totalGastos(),
                 preview.saldoFinalContado(), preview.saldoEsperado(),
                 preview.fechaApertura(),
                 corte.getFechaCierre(), usuario, preview.detallePagos(),
+                preview.gastos(),
                 preview.totalReal(), preview.diferencia());
     }
 
@@ -364,12 +372,25 @@ public class CajaServiceImpl implements CajaService {
                 corte.getCaja().getSucursal().getIdSucursal(), corte.getCaja().getSucursal().getNombre(),
                 corte.getSaldoInicial(), corte.getTotalVentas(),
                 corte.getTotalVentasContado(), corte.getTotalVentasCredito(),
-                corte.getTotalIngresos(), corte.getTotalEgresos(),
+                corte.getTotalIngresos(), corte.getTotalEgresos(), 0.0,
                 corte.getSaldoFinalContado(), null,
                 corte.getFechaApertura(), corte.getFechaCierre(),
                 corte.getUsuario().getUsuario(), detallePagos,
+                java.util.List.of(),
                 totalReal > 0 ? totalReal : null,
                 totalReal > 0 ? diferencia : null);
+    }
+
+    private GastoResponse toGastoResponse(Gasto g) {
+        return new GastoResponse(
+                g.getIdGasto(), g.getCaja().getIdCaja(),
+                g.getCaja().getNombre(),
+                g.getCaja().getSucursal() != null ? g.getCaja().getSucursal().getNombre() : null,
+                g.getDescripcion(),
+                g.getMonto(), g.getUsuario().getUsuario(),
+                g.getAutorizador() != null ? g.getAutorizador().getUsuario() : null,
+                g.getEstado().name(), g.getFechaCreacion(),
+                g.getFechaAutorizacion());
     }
 
     private Caja buscarOExcepcion(Integer id) {

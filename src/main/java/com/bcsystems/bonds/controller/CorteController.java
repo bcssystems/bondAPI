@@ -77,10 +77,11 @@ public class CorteController {
                 c.getCaja().getSucursal().getIdSucursal(), c.getCaja().getSucursal().getNombre(),
                 c.getSaldoInicial(), c.getTotalVentas(),
                 c.getTotalVentasContado(), c.getTotalVentasCredito(),
-                c.getTotalIngresos(), c.getTotalEgresos(),
+                c.getTotalIngresos(), c.getTotalEgresos(), 0.0,
                 c.getSaldoFinalContado(), null,
                 c.getFechaApertura(), c.getFechaCierre(),
                 c.getUsuario().getUsuario(), detallePagos,
+                java.util.List.of(),
                 totalReal > 0 ? totalReal : null,
                 totalReal > 0 ? diferencia : null);
     }

@@ -15,12 +15,14 @@ public record CorteResponse(
         Double totalVentasCredito,
         Double totalIngresos,
         Double totalEgresos,
+        Double totalGastos,
         Double saldoFinalContado,
         Double saldoEsperado,
         LocalDateTime fechaApertura,
         LocalDateTime fechaCierre,
         String usuario,
         List<CorteDetallePagoDto> detallePagos,
+        List<GastoResponse> gastos,
         Double totalReal,
         Double diferencia
 ) {}
