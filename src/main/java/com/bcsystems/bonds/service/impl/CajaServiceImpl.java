@@ -329,9 +329,6 @@ public class CajaServiceImpl implements CajaService {
     public CorteResponse actualizarDetallePagos(Integer idCorte,
                                                   List<CorteDetallePagoUpdateRequest.ItemDetallePago> pagos) {
         Persona persona = obtenerPersonaActual();
-        if (persona.getRol() != Rol.ADMINISTRADOR && persona.getRol() != Rol.SISTEMAS) {
-            throw new InvalidEntryException("Solo los administradores pueden editar los conteos de un corte");
-        }
 
         CorteCaja corte = corteCajaRepository.findById(idCorte)
                 .orElseThrow(() -> new NotFoundException("Corte no encontrado con id: " + idCorte));

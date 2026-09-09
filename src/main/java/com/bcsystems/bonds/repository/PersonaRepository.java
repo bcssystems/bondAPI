@@ -2,6 +2,7 @@ package com.bcsystems.bonds.repository;
 
 import com.bcsystems.bonds.domain.Persona;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,4 +13,7 @@ public interface PersonaRepository extends JpaRepository<Persona, Integer> {
     Optional<Persona> findByUsuario(String usuario);
     boolean existsByUsuarioIgnoreCase(String usuario);
     boolean existsByUsuarioIgnoreCaseAndIdPersonaNot(String usuario, Integer idPersona);
+
+    @Query("select p from Persona p where p.rol is null and p.rolLegacy is not null")
+    java.util.List<Persona> findPendientesMigracionRol();
 }

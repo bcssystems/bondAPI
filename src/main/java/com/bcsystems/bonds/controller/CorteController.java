@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ public class CorteController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CORTES_VER')")
     public ResponseEntity<Page<CorteResponse>> listar(
             @RequestParam(required = false) Integer idSucursal,
             @RequestParam(required = false) Integer idCaja,
@@ -45,6 +47,7 @@ public class CorteController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('CORTES_VER')")
     public ResponseEntity<CorteResponse> obtenerPorId(@PathVariable Integer id) {
         CorteCaja corte = corteCajaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Corte no encontrado con id: " + id));
@@ -52,6 +55,7 @@ public class CorteController {
     }
 
     @PutMapping("/{id}/detalle-pagos")
+    @PreAuthorize("hasAuthority('CORTES_EDITAR')")
     public ResponseEntity<CorteResponse> actualizarDetallePagos(
             @PathVariable Integer id,
             @RequestBody CorteDetallePagoUpdateRequest request) {

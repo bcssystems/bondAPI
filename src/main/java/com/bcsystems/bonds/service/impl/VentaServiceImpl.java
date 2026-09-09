@@ -292,9 +292,6 @@ public class VentaServiceImpl implements VentaService {
                 .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
 
         Persona autorizador = obtenerPersonaActual();
-        if (autorizador.getRol() != Rol.ADMINISTRADOR && autorizador.getRol() != Rol.SISTEMAS) {
-            throw new InvalidEntryException("Solo un administrador puede autorizar la cancelacion");
-        }
         if (venta.getEstado() == EstadoVenta.CANCELADA) {
             throw new InvalidEntryException("La venta ya está cancelada");
         }
@@ -368,9 +365,6 @@ public class VentaServiceImpl implements VentaService {
             throw new InvalidEntryException("La venta no tiene una solicitud de cancelacion pendiente");
         }
         Persona rechazador = obtenerPersonaActual();
-        if (rechazador.getRol() != Rol.ADMINISTRADOR && rechazador.getRol() != Rol.SISTEMAS) {
-            throw new InvalidEntryException("Solo un administrador puede rechazar la cancelacion");
-        }
         venta.setEstado(EstadoVenta.COMPLETADA);
         venta.setMotivoCancelacion(null);
         venta.setSolicitanteCancelacion(null);

@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,11 +26,13 @@ public class ProveedorController {
     }
 
     @GetMapping("/activos")
+    @PreAuthorize("hasAuthority('PROVEEDORES_VER')")
     public ResponseEntity<List<ProveedorResponse>> listarActivos() {
         return ResponseEntity.ok(proveedorService.listarActivos());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PROVEEDORES_VER')")
     public ResponseEntity<Page<ProveedorResponse>> listar(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean activo,
@@ -38,21 +41,25 @@ public class ProveedorController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROVEEDORES_VER')")
     public ResponseEntity<ProveedorResponse> obtenerPorId(@PathVariable Integer id) {
         return ResponseEntity.ok(proveedorService.obtenerPorId(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PROVEEDORES_CREAR')")
     public ResponseEntity<ProveedorResponse> crear(@Valid @RequestBody ProveedorRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(proveedorService.crear(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROVEEDORES_EDITAR')")
     public ResponseEntity<ProveedorResponse> actualizar(@PathVariable Integer id, @Valid @RequestBody ProveedorRequest request) {
         return ResponseEntity.ok(proveedorService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROVEEDORES_ELIMINAR')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         proveedorService.eliminar(id);
         return ResponseEntity.noContent().build();

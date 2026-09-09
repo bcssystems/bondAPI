@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,27 +24,32 @@ public class PersonaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PERSONAS_VER')")
     public ResponseEntity<Page<PersonaResponse>> listar(
             @PageableDefault(size = 10, sort = "idPersona", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(personaService.listar(pageable));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERSONAS_VER')")
     public ResponseEntity<PersonaResponse> obtenerPorId(@PathVariable Integer id) {
         return ResponseEntity.ok(personaService.obtenerPorId(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PERSONAS_CREAR')")
     public ResponseEntity<PersonaResponse> crear(@Valid @RequestBody PersonaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(personaService.crear(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERSONAS_EDITAR')")
     public ResponseEntity<PersonaResponse> actualizar(@PathVariable Integer id, @Valid @RequestBody PersonaRequest request) {
         return ResponseEntity.ok(personaService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('PERSONAS_ELIMINAR')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         personaService.eliminar(id);
         return ResponseEntity.noContent().build();

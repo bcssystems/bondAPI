@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class CategoriaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CATEGORIAS_VER')")
     public ResponseEntity<Page<CategoriaResponse>> listar(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean activo,
@@ -30,22 +32,26 @@ public class CategoriaController {
     }
 
     @GetMapping("/activas")
+    @PreAuthorize("hasAuthority('CATEGORIAS_VER')")
     public ResponseEntity<List<CategoriaResponse>> listarActivas() {
         return ResponseEntity.ok(categoriaService.listarActivas());
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('CATEGORIAS_CREAR')")
     public ResponseEntity<CategoriaResponse> crear(@RequestBody CategoriaRequest request) {
         return ResponseEntity.ok(categoriaService.crear(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('CATEGORIAS_EDITAR')")
     public ResponseEntity<CategoriaResponse> actualizar(
             @PathVariable Integer id, @RequestBody CategoriaRequest request) {
         return ResponseEntity.ok(categoriaService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('CATEGORIAS_ELIMINAR')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         categoriaService.eliminar(id);
         return ResponseEntity.ok().build();

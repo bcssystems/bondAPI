@@ -6,6 +6,7 @@ import com.bcsystems.bonds.service.TipoPagoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,26 +22,31 @@ public class TipoPagoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('TIPOS_PAGO_VER')")
     public ResponseEntity<List<TipoPagoResponse>> listarTodos() {
         return ResponseEntity.ok(tipoPagoService.listarTodos());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIPOS_PAGO_VER')")
     public ResponseEntity<TipoPagoResponse> obtenerPorId(@PathVariable Integer id) {
         return ResponseEntity.ok(tipoPagoService.obtenerPorId(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('TIPOS_PAGO_CREAR')")
     public ResponseEntity<TipoPagoResponse> crear(@Valid @RequestBody TipoPagoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(tipoPagoService.crear(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIPOS_PAGO_EDITAR')")
     public ResponseEntity<TipoPagoResponse> actualizar(@PathVariable Integer id, @Valid @RequestBody TipoPagoRequest request) {
         return ResponseEntity.ok(tipoPagoService.actualizar(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('TIPOS_PAGO_ELIMINAR')")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         tipoPagoService.eliminar(id);
         return ResponseEntity.noContent().build();

@@ -80,10 +80,6 @@ public class GastoServiceImpl implements GastoService {
         }
 
         Persona autorizador = obtenerPersonaActual();
-        Rol rol = autorizador.getRol();
-        if (rol != Rol.ADMINISTRADOR && rol != Rol.AUDITORIAS) {
-            throw new InvalidEntryException("No tienes permisos para autorizar gastos");
-        }
 
         // Deduct from cash register when authorized
         Caja caja = gasto.getCaja();
@@ -111,10 +107,6 @@ public class GastoServiceImpl implements GastoService {
         }
 
         Persona autorizador = obtenerPersonaActual();
-        Rol rol = autorizador.getRol();
-        if (rol != Rol.ADMINISTRADOR && rol != Rol.AUDITORIAS) {
-            throw new InvalidEntryException("No tienes permisos para rechazar gastos");
-        }
 
         gasto.setEstado(EstadoGasto.RECHAZADO);
         gasto.setAutorizador(autorizador);

@@ -1,15 +1,21 @@
 package com.bcsystems.bonds.auth;
 
 import com.bcsystems.bonds.domain.Persona;
+import com.bcsystems.bonds.domain.Rol;
 import com.bcsystems.bonds.domain.Token;
 import com.bcsystems.bonds.exception.InvalidEntryException;
 import com.bcsystems.bonds.repository.PersonaRepository;
+import com.bcsystems.bonds.repository.RolRepository;
 import com.bcsystems.bonds.repository.TokenRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
@@ -19,17 +25,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RolRepository rolRepository;
 
     public AuthService(PersonaRepository personaRepository,
                        TokenRepository tokenRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       RolRepository rolRepository) {
         this.personaRepository = personaRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.rolRepository = rolRepository;
     }
 
     @Transactional
@@ -38,12 +47,23 @@ public class AuthService {
             throw new InvalidEntryException("El usuario ya existe");
         }
 
+        if (personaRepository.count() > 0 && !tienePermiso("PERSONAS_CREAR")) {
+            throw new InvalidEntryException("Registro no autorizado");
+        }
+
+        Rol rol = rolRepository.findById(request.idRol())
+                .orElseThrow(() -> new InvalidEntryException("Rol no encontrado"));
+
+        if (!Boolean.TRUE.equals(rol.getActivo())) {
+            throw new InvalidEntryException("El rol seleccionado está inactivo");
+        }
+
         Persona persona = Persona.builder()
                 .nombre(request.nombre())
                 .apellido(request.apellido())
                 .usuario(request.usuario())
                 .password(passwordEncoder.encode(request.password()))
-                .rol(request.rol())
+                .rol(rol)
                 .activa(true)
                 .build();
 
@@ -127,13 +147,22 @@ public class AuthService {
         tokenRepository.saveAll(tokens);
     }
 
+    private boolean tienePermiso(String permiso) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals(permiso));
+    }
+
     private AuthResponse buildAuthResponse(Token token, Persona persona) {
+        var permisos = jwtService.extractPermissions(token.getToken());
+
         return new AuthResponse(
                 token.getToken(),
                 token.getRefreshToken(),
                 persona.getUsuario(),
                 persona.getNombre() + " " + persona.getApellido(),
-                persona.getRol().name()
+                persona.getRol().getNombre(),
+                permisos.stream().sorted().collect(Collectors.toList())
         );
     }
 }

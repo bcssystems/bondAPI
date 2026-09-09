@@ -1,6 +1,7 @@
 package com.bcsystems.bonds.auth;
 
 import com.bcsystems.bonds.domain.Persona;
+import com.bcsystems.bonds.domain.Permiso;
 import com.bcsystems.bonds.domain.Token;
 import com.bcsystems.bonds.domain.en.TokenType;
 import io.jsonwebtoken.*;
@@ -10,10 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -39,7 +39,8 @@ public class JwtService {
     public Token generateToken(Persona persona) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("name", persona.getNombre() + " " + persona.getApellido());
-        claims.put("rol", persona.getRol().name());
+        claims.put("rol", persona.getRol().getNombre());
+        claims.put("permisos", new ArrayList<>(getAllPermissions(persona)));
 
         String accessToken = buildToken(claims, persona.getUsuario(), jwtExpiration);
         String refreshToken = buildToken(new HashMap<>(), persona.getUsuario(), refreshExpiration);
@@ -52,6 +53,26 @@ public class JwtService {
                 .isExpired(false)
                 .persona(persona)
                 .build();
+    }
+
+    private Set<String> getAllPermissions(Persona persona) {
+        Set<String> permisos = persona.getRol().getPermisos().stream()
+                .map(Permiso::getClave)
+                .collect(Collectors.toSet());
+
+        if (persona.getPermisosAdicionales() != null) {
+            persona.getPermisosAdicionales().stream()
+                    .map(pa -> pa.getPermiso().getClave())
+                    .forEach(permisos::add);
+        }
+
+        return permisos;
+    }
+
+    public Set<String> extractPermissions(String token) {
+        Claims claims = extractAllClaims(token);
+        List<String> permisos = claims.get("permisos", List.class);
+        return permisos != null ? new LinkedHashSet<>(permisos) : new LinkedHashSet<>();
     }
 
     private String buildToken(Map<String, Object> extraClaims, String username, long expiration) {

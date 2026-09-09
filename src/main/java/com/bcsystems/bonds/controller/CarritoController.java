@@ -10,6 +10,7 @@ import com.bcsystems.bonds.repository.CarritoItemRapidoRepository;
 import com.bcsystems.bonds.service.ReservaProductoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class CarritoController {
     }
 
     @PostMapping("/agregar")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Map<String, Object>> agregar(@RequestBody Map<String, Object> body) {
         Integer idCaja = Integer.valueOf(body.get("idCaja").toString());
         Integer idProducto = Integer.valueOf(body.get("idProducto").toString());
@@ -44,6 +46,7 @@ public class CarritoController {
     }
 
     @DeleteMapping("/quitar/{idProducto}")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Void> quitar(@PathVariable Integer idProducto,
                                         @RequestParam Integer idCaja) {
         reservaProductoService.quitarReserva(idCaja, idProducto);
@@ -51,6 +54,7 @@ public class CarritoController {
     }
 
     @PutMapping("/actualizar")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Map<String, Object>> actualizar(@RequestBody Map<String, Object> body) {
         Integer idCaja = Integer.valueOf(body.get("idCaja").toString());
         Integer idProducto = Integer.valueOf(body.get("idProducto").toString());
@@ -60,12 +64,14 @@ public class CarritoController {
     }
 
     @DeleteMapping("/limpiar")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Void> limpiar(@RequestParam Integer idCaja) {
         reservaProductoService.limpiarReservas(idCaja);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/reservados/{idSucursal}")
+    @PreAuthorize("hasAuthority('VENTAS_VER')")
     public ResponseEntity<List<ReservaProductoResponse>> reservados(
             @PathVariable Integer idSucursal) {
         return ResponseEntity.ok(
@@ -73,6 +79,7 @@ public class CarritoController {
     }
 
     @GetMapping("/rapidos/{idCaja}")
+    @PreAuthorize("hasAuthority('VENTAS_VER')")
     public ResponseEntity<List<CarritoItemRapidoResponse>> listarRapidos(
             @PathVariable Integer idCaja) {
         List<CarritoItemRapidoResponse> items = carritoRapidoRepository.findByCajaIdCaja(idCaja)
@@ -88,6 +95,7 @@ public class CarritoController {
     }
 
     @PostMapping("/rapidos")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<CarritoItemRapidoResponse> agregarRapido(
             @RequestBody CarritoItemRapidoRequest request) {
         Caja caja = cajaRepository.findById(request.idCaja())
@@ -112,12 +120,14 @@ public class CarritoController {
     }
 
     @DeleteMapping("/rapidos/limpiar")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Void> limpiarRapidos(@RequestParam Integer idCaja) {
         carritoRapidoRepository.deleteByCajaIdCajaNative(idCaja);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/rapidos/{id}")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Void> actualizarRapido(
             @PathVariable Integer id,
             @RequestBody CarritoItemRapidoRequest request) {
@@ -131,6 +141,7 @@ public class CarritoController {
     }
 
     @DeleteMapping("/rapidos/{id}")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<Void> eliminarRapido(@PathVariable Integer id) {
         carritoRapidoRepository.deleteById(id);
         return ResponseEntity.noContent().build();

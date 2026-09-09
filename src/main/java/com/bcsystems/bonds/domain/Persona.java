@@ -1,12 +1,13 @@
 package com.bcsystems.bonds.domain;
 
-import com.bcsystems.bonds.domain.en.Rol;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.envers.Audited;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Audited
 @Entity
@@ -28,9 +29,13 @@ public class Persona {
     @Column(nullable = false, length = 100)
     private String apellido;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_rol")
     private Rol rol;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rol", length = 20)
+    private com.bcsystems.bonds.domain.en.Rol rolLegacy;
 
     @Column(nullable = false)
     private Boolean activa;
@@ -44,4 +49,8 @@ public class Persona {
 
     @Column(length = 100)
     private String password;
+
+    @OneToMany(mappedBy = "persona", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PermisoAdicional> permisosAdicionales = new ArrayList<>();
 }
