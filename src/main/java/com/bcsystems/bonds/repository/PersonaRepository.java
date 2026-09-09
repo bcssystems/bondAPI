@@ -14,6 +14,6 @@ public interface PersonaRepository extends JpaRepository<Persona, Integer> {
     boolean existsByUsuarioIgnoreCase(String usuario);
     boolean existsByUsuarioIgnoreCaseAndIdPersonaNot(String usuario, Integer idPersona);
 
-    @Query("select p from Persona p where p.rol is null and p.rolLegacy is not null")
+    @Query("select p from Persona p where p.rol is null")
     java.util.List<Persona> findPendientesMigracionRol();
 }

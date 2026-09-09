@@ -33,10 +33,6 @@ public class Persona {
     @JoinColumn(name = "id_rol")
     private Rol rol;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "rol", length = 20)
-    private com.bcsystems.bonds.domain.en.Rol rolLegacy;
-
     @Column(nullable = false)
     private Boolean activa;
 

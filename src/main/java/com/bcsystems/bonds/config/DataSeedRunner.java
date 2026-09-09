@@ -137,17 +137,10 @@ public class DataSeedRunner implements CommandLineRunner {
         List<Persona> pendientes = personaRepository.findPendientesMigracionRol();
         if (pendientes.isEmpty()) return;
 
-        Map<String, Rol> rolesPorNombre = new HashMap<>();
-        rolRepository.findAll().forEach(r -> rolesPorNombre.put(r.getNombre(), r));
+        Rol rol = rolRepository.findByNombreIgnoreCase("USUARIO").orElse(null);
+        if (rol == null) return;
 
         for (Persona persona : pendientes) {
-            String nombre = persona.getRolLegacy() != null
-                    ? persona.getRolLegacy().name().toUpperCase() : "USUARIO";
-            Rol rol = rolesPorNombre.get(nombre);
-            if (rol == null) {
-                rol = rolesPorNombre.get("USUARIO");
-            }
-            if (rol == null) continue;
             persona.setRol(rol);
             personaRepository.save(persona);
         }
