@@ -29,17 +29,21 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
            "(:search IS NULL OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "AND (:activo IS NULL OR p.activo = :activo) " +
-           "AND (:idSucursal IS NULL OR EXISTS (SELECT i FROM InventarioSucursal i WHERE i.producto.idProducto = p.idProducto AND i.sucursal.idSucursal = :idSucursal))")
+           "AND (:idSucursal IS NULL OR EXISTS (SELECT i FROM InventarioSucursal i WHERE i.producto.idProducto = p.idProducto AND i.sucursal.idSucursal = :idSucursal)) " +
+           "AND (:idCategoria IS NULL OR p.categoria.idCategoria = :idCategoria)")
     Page<Producto> buscarConFiltros(@Param("search") String search,
                                     @Param("activo") Boolean activo,
                                     @Param("idSucursal") Integer idSucursal,
+                                    @Param("idCategoria") Integer idCategoria,
                                     Pageable pageable);
 
     @Query("SELECT p FROM Producto p WHERE p.activo = true " +
            "AND (:search IS NULL OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:idSucursal IS NULL OR EXISTS (SELECT i FROM InventarioSucursal i WHERE i.producto.idProducto = p.idProducto AND i.sucursal.idSucursal = :idSucursal))")
+           "AND (:idSucursal IS NULL OR EXISTS (SELECT i FROM InventarioSucursal i WHERE i.producto.idProducto = p.idProducto AND i.sucursal.idSucursal = :idSucursal)) " +
+           "AND (:idCategoria IS NULL OR p.categoria.idCategoria = :idCategoria)")
     Page<Producto> buscarParaVenta(@Param("search") String search,
                                    @Param("idSucursal") Integer idSucursal,
+                                   @Param("idCategoria") Integer idCategoria,
                                    Pageable pageable);
 }

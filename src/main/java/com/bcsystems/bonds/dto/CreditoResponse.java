@@ -17,5 +17,6 @@ public record CreditoResponse(
         Double porcentajeInteres,
         LocalDateTime fechaVencimiento,
         EstadoCredito estado,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaCreacion,
+        String nota
 ) {}

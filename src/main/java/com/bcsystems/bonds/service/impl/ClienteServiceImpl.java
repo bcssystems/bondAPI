@@ -242,6 +242,7 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     private ClienteResponse toResponse(Cliente c) {
+        boolean tieneIne = clienteIneRepository.findByClienteIdCliente(c.getIdCliente()).isPresent();
         return new ClienteResponse(
                 c.getIdCliente(), c.getNombre(),
                 c.getApellidoPaterno(), c.getApellidoMaterno(),
@@ -253,6 +254,7 @@ public class ClienteServiceImpl implements ClienteService {
                 c.getRfc(), c.getRepresentanteLegal(), c.getDireccionEntrega(),
                 c.getActivo(), c.getFechaRegistro(),
                 c.getTieneCredito(), c.getLimiteCredito(), c.getSaldoActual(),
-                c.getEnListaNegra(), c.getFechaListaNegra(), c.getMotivoListaNegra());
+                c.getEnListaNegra(), c.getFechaListaNegra(), c.getMotivoListaNegra(),
+                tieneIne);
     }
 }

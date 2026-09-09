@@ -1,6 +1,7 @@
 package com.bcsystems.bonds.repository;
 
 import com.bcsystems.bonds.domain.MovimientoStock;
+import com.bcsystems.bonds.domain.en.TipoMovimiento;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,11 +17,13 @@ public interface MovimientoStockRepository extends JpaRepository<MovimientoStock
     @Query("SELECT m FROM MovimientoStock m WHERE " +
            "(:idProducto IS NULL OR m.producto.idProducto = :idProducto) AND " +
            "(:idSucursal IS NULL OR m.sucursal.idSucursal = :idSucursal) AND " +
+           "(:tipo IS NULL OR m.tipoMovimiento = :tipo) AND " +
            "(:fechaInicio IS NULL OR m.fechaMovimiento >= :fechaInicio) AND " +
            "(:fechaFin IS NULL OR m.fechaMovimiento <= :fechaFin) " +
            "ORDER BY m.fechaMovimiento DESC")
     Page<MovimientoStock> buscarConFiltros(@Param("idProducto") Integer idProducto,
                                             @Param("idSucursal") Integer idSucursal,
+                                            @Param("tipo") TipoMovimiento tipo,
                                             @Param("fechaInicio") LocalDateTime fechaInicio,
                                             @Param("fechaFin") LocalDateTime fechaFin,
                                             Pageable pageable);

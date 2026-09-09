@@ -7,6 +7,7 @@ public record VentaDetalleResponse(
         String productoNombre,
         String descripcion,
         Integer cantidad,
+        String unidadMedida,
         Double precioUnitario,
         Double subtotal,
         String atributosText

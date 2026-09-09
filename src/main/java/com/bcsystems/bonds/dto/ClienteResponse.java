@@ -30,5 +30,6 @@ public record ClienteResponse(
         Double saldoActual,
         Boolean enListaNegra,
         LocalDateTime fechaListaNegra,
-        String motivoListaNegra
+        String motivoListaNegra,
+        Boolean tieneIne
 ) {}

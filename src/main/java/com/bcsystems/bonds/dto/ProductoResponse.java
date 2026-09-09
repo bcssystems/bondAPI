@@ -13,6 +13,8 @@ public record ProductoResponse(
     Integer stockMinimo,
     Integer stockMaximo,
     Double costoPromedio,
+    Integer idCategoria,
+    String categoriaNombre,
     String unidadMedida,
     Double metrosPorRollo,
     Boolean activo,

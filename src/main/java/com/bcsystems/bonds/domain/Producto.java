@@ -44,6 +44,10 @@ public class Producto {
 
     private Double costoPromedio;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_categoria")
+    private Categoria categoria;
+
     @Builder.Default
     @Column(length = 10)
     private String unidadMedida = "UNIDAD";

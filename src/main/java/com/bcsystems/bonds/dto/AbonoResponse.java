@@ -8,5 +8,6 @@ public record AbonoResponse(
         Double monto,
         String tipo,
         LocalDateTime fecha,
-        String usuario
+        String usuario,
+        String metodoPago
 ) {}

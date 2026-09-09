@@ -2,6 +2,7 @@ package com.bcsystems.bonds.service.impl;
 
 import com.bcsystems.bonds.domain.Auditoria;
 import com.bcsystems.bonds.domain.MovimientoStock;
+import com.bcsystems.bonds.domain.en.TipoMovimiento;
 import com.bcsystems.bonds.dto.KardexUnificadoResponse;
 import com.bcsystems.bonds.dto.MovimientoStockResponse;
 import com.bcsystems.bonds.repository.AuditoriaRepository;
@@ -33,9 +34,9 @@ public class KardexServiceImpl implements KardexService {
 
     @Override
     public Page<MovimientoStockResponse> listarMovimientos(Integer idProducto, Integer idSucursal,
-                                                            LocalDateTime fechaInicio, LocalDateTime fechaFin,
-                                                            Pageable pageable) {
-        return movimientoStockRepository.buscarConFiltros(idProducto, idSucursal, fechaInicio, fechaFin, pageable)
+                                                            TipoMovimiento tipo, LocalDateTime fechaInicio,
+                                                            LocalDateTime fechaFin, Pageable pageable) {
+        return movimientoStockRepository.buscarConFiltros(idProducto, idSucursal, tipo, fechaInicio, fechaFin, pageable)
                 .map(m -> new MovimientoStockResponse(
                         m.getIdMovimiento(),
                         m.getProducto().getIdProducto(),
@@ -55,11 +56,19 @@ public class KardexServiceImpl implements KardexService {
     }
 
     @Override
-    public Page<KardexUnificadoResponse> listarTodo(Integer idSucursal, LocalDateTime fechaInicio, LocalDateTime fechaFin,
+    public Page<KardexUnificadoResponse> listarTodo(Integer idSucursal, Integer idProducto,
+                                                     LocalDateTime fechaInicio, LocalDateTime fechaFin,
                                                      String tipo, Pageable pageable) {
         List<MovimientoStock> movimientos = movimientoStockRepository
                 .buscarMovimientosPorFechas(idSucursal, fechaInicio, fechaFin);
-        List<Auditoria> auditorias = auditoriaRepository.buscarPorFechas(fechaInicio, fechaFin);
+        if (idProducto != null) {
+            movimientos = movimientos.stream()
+                    .filter(m -> m.getProducto() != null && m.getProducto().getIdProducto().equals(idProducto))
+                    .collect(Collectors.toList());
+        }
+        List<Auditoria> auditorias = idProducto == null
+                ? auditoriaRepository.buscarPorFechas(fechaInicio, fechaFin)
+                : List.of();
 
         AtomicLong counter = new AtomicLong(0);
         List<KardexUnificadoResponse> combined = new ArrayList<>();
@@ -70,6 +79,9 @@ public class KardexServiceImpl implements KardexService {
                     m.getFechaMovimiento(),
                     m.getTipoMovimiento().name(),
                     "PRODUCTO (" + m.getProducto().getSku() + ")",
+                    m.getProducto().getNombre(),
+                    m.getProducto().getSku(),
+                    m.getSucursal() != null ? m.getSucursal().getNombre() : "Global",
                     m.getObservacion() != null ? m.getObservacion() : m.getTipoMovimiento() + " de " + m.getCantidad() + " unidades",
                     m.getUsuario(),
                     m.getReferencia(),
@@ -86,6 +98,9 @@ public class KardexServiceImpl implements KardexService {
                     a.getFecha(),
                     a.getAccion().name(),
                     a.getEntidad() + (a.getEntidadId() != null ? " #" + a.getEntidadId() : ""),
+                    a.getEntidad(),
+                    null,
+                    null,
                     a.getDetalle(),
                     a.getUsuario(),
                     a.getReferencia(),

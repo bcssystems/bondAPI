@@ -6,8 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface ProductoService {
-    Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Pageable pageable);
-    Page<ProductoVentaResponse> listarParaVenta(String search, Integer idSucursal, Pageable pageable);
+    Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Integer idCategoria, Pageable pageable);
+    Page<ProductoVentaResponse> listarParaVenta(String search, Integer idSucursal, Integer idCategoria, Pageable pageable);
     ProductoResponse obtenerPorId(Integer id);
     ProductoResponse crear(ProductoRequest request);
     ProductoResponse actualizar(Integer id, ProductoRequest request);

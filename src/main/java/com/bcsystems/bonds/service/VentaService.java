@@ -18,6 +18,7 @@ public interface VentaService {
     VentaResponse rechazarCancelacion(Integer id);
     VentaResponse ponerEnEspera(Integer id);
     VentaResponse reanudar(Integer id);
+    VentaResponse cancelarEspera(Integer id);
     List<VentaResponse> ventasEnEspera(Integer idCaja);
     List<VentaResponse> listarPorSucursal(Integer idSucursal);
     VentaResponse ventaRapida(Integer idCaja, String descripcion, Double precioCompra, Double precioVenta, Integer cantidad, Integer idCliente);

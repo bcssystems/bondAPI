@@ -83,6 +83,11 @@ public class VentaController {
         return ResponseEntity.ok(ventaService.reanudar(id));
     }
 
+    @PostMapping("/{id}/cancelar-espera")
+    public ResponseEntity<VentaResponse> cancelarEspera(@PathVariable Integer id) {
+        return ResponseEntity.ok(ventaService.cancelarEspera(id));
+    }
+
     @GetMapping("/caja/{idCaja}/espera")
     public ResponseEntity<List<VentaResponse>> ventasEnEspera(@PathVariable Integer idCaja) {
         return ResponseEntity.ok(ventaService.ventasEnEspera(idCaja));

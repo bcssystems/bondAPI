@@ -36,6 +36,7 @@ public class ProductoServiceImpl implements ProductoService {
     private final SucursalRepository sucursalRepository;
     private final InventarioSucursalRepository inventarioSucursalRepository;
     private final MovimientoStockRepository movimientoStockRepository;
+    private final CategoriaRepository categoriaRepository;
     private final CodigoGeneratorService codigoGenerator;
     private final AuditoriaService auditoriaService;
 
@@ -47,6 +48,7 @@ public class ProductoServiceImpl implements ProductoService {
                                SucursalRepository sucursalRepository,
                                InventarioSucursalRepository inventarioSucursalRepository,
                                MovimientoStockRepository movimientoStockRepository,
+                               CategoriaRepository categoriaRepository,
                                CodigoGeneratorService codigoGenerator,
                                AuditoriaService auditoriaService) {
         this.productoRepository = productoRepository;
@@ -54,20 +56,21 @@ public class ProductoServiceImpl implements ProductoService {
         this.sucursalRepository = sucursalRepository;
         this.inventarioSucursalRepository = inventarioSucursalRepository;
         this.movimientoStockRepository = movimientoStockRepository;
+        this.categoriaRepository = categoriaRepository;
         this.codigoGenerator = codigoGenerator;
         this.auditoriaService = auditoriaService;
     }
 
     @Override
-    public Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Pageable pageable) {
-        return productoRepository.buscarConFiltros(search, activo, idSucursal, pageable)
+    public Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Integer idCategoria, Pageable pageable) {
+        return productoRepository.buscarConFiltros(search, activo, idSucursal, idCategoria, pageable)
                 .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<ProductoVentaResponse> listarParaVenta(String search, Integer idSucursal, Pageable pageable) {
-        return productoRepository.buscarParaVenta(search, idSucursal, pageable)
+    public Page<ProductoVentaResponse> listarParaVenta(String search, Integer idSucursal, Integer idCategoria, Pageable pageable) {
+        return productoRepository.buscarParaVenta(search, idSucursal, idCategoria, pageable)
                 .map(this::toVentaResponse);
     }
 
@@ -109,6 +112,7 @@ public class ProductoServiceImpl implements ProductoService {
                 .descripcion(request.descripcion())
                 .precioBase(request.precioBase())
                 .costoPromedio(request.costoPromedio())
+                .categoria(resolverCategoria(request.idCategoria()))
                 .unidadMedida(request.unidadMedida() != null ? request.unidadMedida() : "UNIDAD")
                 .metrosPorRollo(request.metrosPorRollo())
                 .stockActual(stockTotal)
@@ -123,6 +127,14 @@ public class ProductoServiceImpl implements ProductoService {
                 "Se cre\u00f3 el producto: " + producto.getNombre());
 
         return toResponse(producto);
+    }
+
+    private Categoria resolverCategoria(Integer idCategoria) {
+        if (idCategoria == null) {
+            throw new InvalidEntryException("La categor\u00eda es obligatoria");
+        }
+        return categoriaRepository.findById(idCategoria)
+                .orElseThrow(() -> new InvalidEntryException("Categor\u00eda no encontrada"));
     }
 
     private void guardarInventarios(Producto producto, List<InventarioSucursalRequest> inventarios, String usuario) {
@@ -173,6 +185,7 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setDescripcion(request.descripcion());
         producto.setPrecioBase(request.precioBase());
         if (request.costoPromedio() != null) producto.setCostoPromedio(request.costoPromedio());
+        producto.setCategoria(resolverCategoria(request.idCategoria()));
         if (request.unidadMedida() != null) producto.setUnidadMedida(request.unidadMedida());
         if (request.metrosPorRollo() != null) producto.setMetrosPorRollo(request.metrosPorRollo());
         if (request.activo() != null) producto.setActivo(request.activo());
@@ -388,6 +401,9 @@ public class ProductoServiceImpl implements ProductoService {
     @Transactional
     @Override
     public ProductoResponse registrarMovimientoStock(Integer idProducto, MovimientoStockRequest request) {
+        if (request.tipoMovimiento() != TipoMovimiento.ENTRADA && request.tipoMovimiento() != TipoMovimiento.SALIDA) {
+            throw new InvalidEntryException("Solo se permiten movimientos de tipo ENTRADA o SALIDA");
+        }
         Producto producto = buscarOExcepcion(idProducto);
 
         Sucursal sucursal = null;
@@ -610,7 +626,8 @@ public class ProductoServiceImpl implements ProductoService {
                 p.getIdProducto(), p.getSku(), p.getNombre(),
                 p.getPrecioBase(),
                 p.getStockActual(), p.getCostoPromedio(),
-                p.getActivo(), multimedia, inventario);
+                p.getActivo(), p.getUnidadMedida(), p.getMetrosPorRollo(),
+                multimedia, inventario);
     }
 
     private ProductoResponse toResponse(Producto p) {
@@ -631,7 +648,10 @@ public class ProductoServiceImpl implements ProductoService {
                 p.getIdProducto(), p.getSku(), p.getNombre(), p.getDescripcion(),
                 p.getPrecioBase(),
                 p.getStockActual(), p.getStockMinimo(), p.getStockMaximo(),
-                p.getCostoPromedio(), p.getUnidadMedida(), p.getMetrosPorRollo(),
+                p.getCostoPromedio(),
+                p.getCategoria() != null ? p.getCategoria().getIdCategoria() : null,
+                p.getCategoria() != null ? p.getCategoria().getNombre() : null,
+                p.getUnidadMedida(), p.getMetrosPorRollo(),
                 p.getActivo(), p.getFechaCreacion(), p.getFechaActualizacion(),
                 multimedia, inventario);
     }

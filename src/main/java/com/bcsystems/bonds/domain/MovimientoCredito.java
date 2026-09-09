@@ -47,4 +47,8 @@ public class MovimientoCredito {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
     private Persona usuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_tipo_pago")
+    private TipoPago tipoPago;
 }

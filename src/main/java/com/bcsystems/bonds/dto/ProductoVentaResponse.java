@@ -10,6 +10,8 @@ public record ProductoVentaResponse(
     Integer stockActual,
     Double costoPromedio,
     Boolean activo,
+    String unidadMedida,
+    Double metrosPorRollo,
     List<MultimediaResponse> multimedia,
     List<InventarioSucursalResponse> inventarioSucursales
 ) {

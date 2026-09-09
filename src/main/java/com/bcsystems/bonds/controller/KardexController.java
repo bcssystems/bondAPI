@@ -1,5 +1,6 @@
 package com.bcsystems.bonds.controller;
 
+import com.bcsystems.bonds.domain.en.TipoMovimiento;
 import com.bcsystems.bonds.dto.KardexUnificadoResponse;
 import com.bcsystems.bonds.dto.MovimientoStockResponse;
 import com.bcsystems.bonds.service.KardexService;
@@ -27,19 +28,21 @@ public class KardexController {
     public ResponseEntity<Page<MovimientoStockResponse>> listarMovimientos(
             @RequestParam(required = false) Integer idProducto,
             @RequestParam(required = false) Integer idSucursal,
+            @RequestParam(required = false) TipoMovimiento tipo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @PageableDefault(size = 20, sort = "fechaMovimiento", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(kardexService.listarMovimientos(idProducto, idSucursal, fechaInicio, fechaFin, pageable));
+        return ResponseEntity.ok(kardexService.listarMovimientos(idProducto, idSucursal, tipo, fechaInicio, fechaFin, pageable));
     }
 
     @GetMapping("/todo")
     public ResponseEntity<Page<KardexUnificadoResponse>> listarTodo(
             @RequestParam(required = false) Integer idSucursal,
+            @RequestParam(required = false) Integer idProducto,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
             @RequestParam(required = false) String tipo,
             @PageableDefault(size = 20, sort = "fecha", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(kardexService.listarTodo(idSucursal, fechaInicio, fechaFin, tipo, pageable));
+        return ResponseEntity.ok(kardexService.listarTodo(idSucursal, idProducto, fechaInicio, fechaFin, tipo, pageable));
     }
 }

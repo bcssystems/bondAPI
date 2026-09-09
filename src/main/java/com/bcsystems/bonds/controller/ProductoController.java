@@ -41,16 +41,18 @@ public class ProductoController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean activo,
             @RequestParam(required = false) Integer idSucursal,
+            @RequestParam(required = false) Integer idCategoria,
             @PageableDefault(size = 10, sort = "idProducto", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(productoService.listar(search, activo, idSucursal, pageable));
+        return ResponseEntity.ok(productoService.listar(search, activo, idSucursal, idCategoria, pageable));
     }
 
     @GetMapping("/para-venta")
     public ResponseEntity<Page<ProductoVentaResponse>> listarParaVenta(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Integer idSucursal,
+            @RequestParam(required = false) Integer idCategoria,
             @PageableDefault(size = 50, sort = "sku", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(productoService.listarParaVenta(search, idSucursal, pageable));
+        return ResponseEntity.ok(productoService.listarParaVenta(search, idSucursal, idCategoria, pageable));
     }
 
     @GetMapping("/{id}")

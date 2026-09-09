@@ -38,6 +38,8 @@ public class VentaServiceImpl implements VentaService {
     private final ReservaProductoRepository reservaProductoRepository;
     private final CarritoItemRapidoRepository carritoItemRapidoRepository;
     private final PrecioClienteRepository precioClienteRepository;
+    private final MovimientoStockRepository movimientoStockRepository;
+    private final ClienteIneRepository clienteIneRepository;
 
     @Override
     @Transactional
@@ -135,6 +137,18 @@ public class VentaServiceImpl implements VentaService {
                 if (inv != null) {
                     inv.setStock(inv.getStock() - dto.cantidad());
                     inventarioSucursalRepository.save(inv);
+
+                    movimientoStockRepository.save(MovimientoStock.builder()
+                            .producto(p)
+                            .sucursal(sucursal)
+                            .tipoMovimiento(TipoMovimiento.SALIDA)
+                            .cantidad(dto.cantidad())
+                            .stockAnterior(inv.getStock() + dto.cantidad())
+                            .stockNuevo(inv.getStock())
+                            .referencia("Venta #" + venta.getIdVenta())
+                            .usuario(usuario.getUsuario())
+                            .observacion("Salida por venta")
+                            .build());
                 }
             }
         }
@@ -164,6 +178,9 @@ public class VentaServiceImpl implements VentaService {
             }
             if (cliente.getTieneCredito() == null || !cliente.getTieneCredito()) {
                 throw new InvalidEntryException("El cliente no tiene credito habilitado");
+            }
+            if (!clienteIneRepository.findByClienteIdCliente(cliente.getIdCliente()).isPresent()) {
+                throw new InvalidEntryException("El cliente debe tener INE registrada para venta a credito");
             }
             if (cliente.getLimiteCredito() != null && cliente.getLimiteCredito() > 0) {
                 double disponible = cliente.getLimiteCredito()
@@ -302,6 +319,18 @@ public class VentaServiceImpl implements VentaService {
                 if (inv != null) {
                     inv.setStock(inv.getStock() + d.getCantidad());
                     inventarioSucursalRepository.save(inv);
+
+                    movimientoStockRepository.save(MovimientoStock.builder()
+                            .producto(p)
+                            .sucursal(sucursal)
+                            .tipoMovimiento(TipoMovimiento.ENTRADA)
+                            .cantidad(d.getCantidad())
+                            .stockAnterior(inv.getStock() - d.getCantidad())
+                            .stockNuevo(inv.getStock())
+                            .referencia("Cancelacion Venta #" + id)
+                            .usuario(autorizador.getUsuario())
+                            .observacion("Devolucion por cancelacion de venta")
+                            .build());
                 }
             }
         }
@@ -377,6 +406,53 @@ public class VentaServiceImpl implements VentaService {
         venta.setEstado(EstadoVenta.COMPLETADA);
         venta = ventaRepository.save(venta);
         return toResponse(venta, ventaDetalleRepository.findByVentaIdVenta(id));
+    }
+
+    @Override
+    @Transactional
+    public VentaResponse cancelarEspera(Integer id) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
+        if (venta.getEstado() != EstadoVenta.ESPERA) {
+            throw new InvalidEntryException("La venta no está en espera");
+        }
+        Persona usuario = obtenerPersonaActual();
+        venta.setEstado(EstadoVenta.CANCELADA);
+        venta = ventaRepository.save(venta);
+
+        Sucursal sucursal = venta.getCaja().getSucursal();
+        List<VentaDetalle> detalles = ventaDetalleRepository.findByVentaIdVenta(id);
+        for (VentaDetalle d : detalles) {
+            if (d.getProducto() != null) {
+                Producto p = d.getProducto();
+                p.setStockActual(p.getStockActual() + d.getCantidad());
+                productoRepository.save(p);
+                InventarioSucursal inv = inventarioSucursalRepository
+                        .findByProductoIdProductoAndSucursalIdSucursal(p.getIdProducto(), sucursal.getIdSucursal())
+                        .orElse(null);
+                if (inv != null) {
+                    inv.setStock(inv.getStock() + d.getCantidad());
+                    inventarioSucursalRepository.save(inv);
+
+                    movimientoStockRepository.save(MovimientoStock.builder()
+                            .producto(p)
+                            .sucursal(sucursal)
+                            .tipoMovimiento(TipoMovimiento.ENTRADA)
+                            .cantidad(d.getCantidad())
+                            .stockAnterior(inv.getStock() - d.getCantidad())
+                            .stockNuevo(inv.getStock())
+                            .referencia("Recuperacion Venta en Espera #" + id)
+                            .usuario(usuario.getUsuario())
+                            .observacion("Devolucion por recuperacion de venta en espera")
+                            .build());
+                }
+            }
+        }
+
+        auditoriaService.registrar("Venta", id, "ACTUALIZACION", usuario.getUsuario(),
+                "Recuperacion de venta en espera - Venta #" + id);
+
+        return toResponse(venta, detalles);
     }
 
     @Override
@@ -465,7 +541,9 @@ public class VentaServiceImpl implements VentaService {
                         d.getProducto() != null ? d.getProducto().getSku() : null,
                         d.getProducto() != null ? d.getProducto().getNombre() : null,
                         d.getDescripcion(),
-                        d.getCantidad(), d.getPrecioUnitario(), d.getSubtotal(),
+                        d.getCantidad(),
+                        d.getProducto() != null ? d.getProducto().getUnidadMedida() : null,
+                        d.getPrecioUnitario(), d.getSubtotal(),
                         d.getAtributosText()))
                 .toList();
 

@@ -10,7 +10,7 @@ public record ClienteRequest(
         String codigoPais,
         String whatsapp,
         String empresa,
-        @NotBlank String regimenFiscal,
+        String regimenFiscal,
         String cp,
         String direccion,
         String calle,
