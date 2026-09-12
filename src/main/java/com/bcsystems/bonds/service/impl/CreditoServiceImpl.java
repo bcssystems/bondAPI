@@ -28,6 +28,8 @@ public class CreditoServiceImpl implements CreditoService {
     private final TipoPagoRepository tipoPagoRepository;
     private final com.bcsystems.bonds.service.ConfiguracionService configuracionService;
     private final ClienteIneRepository clienteIneRepository;
+    private final CajaRepository cajaRepository;
+    private final MovimientoCajaRepository movimientoCajaRepository;
 
     @Override
     public List<CreditoResponse> listarCreditosPorCliente(Integer idCliente) {
@@ -62,6 +64,7 @@ public class CreditoServiceImpl implements CreditoService {
         Persona usuario = obtenerPersonaActual();
         TipoAbono tipo = "LIQUIDACION".equals(request.tipo()) ? TipoAbono.LIQUIDACION : TipoAbono.PARCIAL;
         TipoPago tipoPago = resolverTipoPago(request.idTipoPago());
+        Caja caja = resolverCaja(request.idCaja());
 
         double saldoAnterior = credito.getSaldoPendiente();
         double saldoNuevo = saldoAnterior - request.monto();
@@ -73,8 +76,11 @@ public class CreditoServiceImpl implements CreditoService {
                 .fecha(LocalDateTime.now())
                 .usuario(usuario)
                 .tipoPago(tipoPago)
+                .caja(caja)
                 .build();
         abono = abonoRepository.save(abono);
+
+        registrarIngresoCajaAbono(caja, abono, usuario);
 
         TipoMovimientoCredito tipoMov = tipo == TipoAbono.LIQUIDACION ? TipoMovimientoCredito.LIQUIDACION : TipoMovimientoCredito.ABONO;
 
@@ -130,6 +136,7 @@ public class CreditoServiceImpl implements CreditoService {
 
         Persona usuario = obtenerPersonaActual();
         TipoPago tipoPago = resolverTipoPago(request.idTipoPago());
+        Caja caja = resolverCaja(request.idCaja());
         List<AbonoResponse> resultados = new ArrayList<>();
 
         for (Credito credito : activos) {
@@ -152,8 +159,11 @@ public class CreditoServiceImpl implements CreditoService {
                     .fecha(LocalDateTime.now())
                     .usuario(usuario)
                     .tipoPago(tipoPago)
+                    .caja(caja)
                     .build();
             abono = abonoRepository.save(abono);
+
+            registrarIngresoCajaAbono(caja, abono, usuario);
 
             TipoMovimientoCredito tipoMov = tipo == TipoAbono.LIQUIDACION ? TipoMovimientoCredito.LIQUIDACION : TipoMovimientoCredito.ABONO;
 
@@ -264,5 +274,32 @@ public class CreditoServiceImpl implements CreditoService {
         }
         return tipoPagoRepository.findById(idTipoPago)
                 .orElseThrow(() -> new NotFoundException("Tipo de pago no encontrado"));
+    }
+
+    private Caja resolverCaja(Integer idCaja) {
+        if (idCaja == null) {
+            return null;
+        }
+        return cajaRepository.findById(idCaja)
+                .orElseThrow(() -> new NotFoundException("Caja no encontrada"));
+    }
+
+    private void registrarIngresoCajaAbono(Caja caja, Abono abono, Persona usuario) {
+        if (caja == null) {
+            return;
+        }
+        if (caja.getEstado() != CajaEstado.ABIERTA) {
+            throw new InvalidEntryException("La caja no está abierta");
+        }
+        movimientoCajaRepository.save(MovimientoCaja.builder()
+                .caja(caja)
+                .tipo(TipoMovimientoCaja.INGRESO)
+                .monto(abono.getMonto())
+                .motivo("Abono a credito #" + abono.getCredito().getIdCredito())
+                .usuario(usuario)
+                .fecha(LocalDateTime.now())
+                .build());
+        caja.setSaldoActual(caja.getSaldoActual() + abono.getMonto());
+        cajaRepository.save(caja);
     }
 }

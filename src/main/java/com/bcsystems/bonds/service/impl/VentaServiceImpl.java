@@ -391,6 +391,113 @@ public class VentaServiceImpl implements VentaService {
 
     @Override
     @Transactional
+    public VentaResponse actualizarEspera(Integer id, VentaEsperaRequest request) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
+        if (venta.getEstado() != EstadoVenta.ESPERA) {
+            throw new InvalidEntryException("La venta no está en espera");
+        }
+
+        Persona usuario = obtenerPersonaActual();
+        Sucursal sucursal = venta.getCaja().getSucursal();
+        Cliente cliente = request.idCliente() != null
+                ? clienteRepository.findById(request.idCliente()).orElse(null) : null;
+
+        List<VentaDetalle> viejos = ventaDetalleRepository.findByVentaIdVenta(id);
+
+        for (VentaDetalle d : viejos) {
+            if (d.getProducto() != null) {
+                restituirStock(d.getProducto(), d.getCantidad(), sucursal, usuario,
+                        id, "Devolución por edición de venta en espera");
+            }
+        }
+        ventaDetalleRepository.deleteAll(viejos);
+
+        List<VentaDetalle> nuevos = new ArrayList<>();
+        for (VentaDetalleRequest dto : request.detalles()) {
+            VentaDetalle detalle = VentaDetalle.builder()
+                    .venta(venta)
+                    .producto(dto.idProducto() != null
+                            ? productoRepository.findById(dto.idProducto()).orElse(null) : null)
+                    .descripcion(dto.descripcion())
+                    .cantidad(dto.cantidad())
+                    .precioUnitario(dto.precioUnitario())
+                    .subtotal(dto.subtotal())
+                    .atributosText(dto.atributosText())
+                    .build();
+            if (detalle.getProducto() != null) {
+                descontarStock(detalle.getProducto(), dto.cantidad(), sucursal, usuario, id);
+            }
+            nuevos.add(ventaDetalleRepository.save(detalle));
+        }
+
+        venta.setCliente(cliente);
+        venta.setSubtotal(request.subtotal());
+        venta.setDescuento(request.descuento());
+        venta.setTotal(request.total());
+        venta.setNota(request.nota());
+        venta = ventaRepository.save(venta);
+
+        return toResponse(venta, nuevos);
+    }
+
+    private void descontarStock(Producto p, Integer cantidad, Sucursal sucursal,
+                                Persona usuario, Integer idVenta) {
+        InventarioSucursal inv = inventarioSucursalRepository
+                .findByProductoIdProductoAndSucursalIdSucursal(p.getIdProducto(), sucursal.getIdSucursal())
+                .orElse(null);
+        if (inv != null && inv.getStock() < cantidad) {
+            throw new InvalidEntryException("Stock insuficiente en " + sucursal.getNombre()
+                    + " para: " + p.getNombre() + " (disponible: " + inv.getStock()
+                    + ", solicitado: " + cantidad + ")");
+        }
+        p.setStockActual(p.getStockActual() - cantidad);
+        productoRepository.save(p);
+        if (inv != null) {
+            inv.setStock(inv.getStock() - cantidad);
+            inventarioSucursalRepository.save(inv);
+
+            movimientoStockRepository.save(MovimientoStock.builder()
+                    .producto(p)
+                    .sucursal(sucursal)
+                    .tipoMovimiento(TipoMovimiento.SALIDA)
+                    .cantidad(cantidad)
+                    .stockAnterior(inv.getStock() + cantidad)
+                    .stockNuevo(inv.getStock())
+                    .referencia("Venta en Espera #" + idVenta)
+                    .usuario(usuario.getUsuario())
+                    .observacion("Salida por venta en espera")
+                    .build());
+        }
+    }
+
+    private void restituirStock(Producto p, Integer cantidad, Sucursal sucursal,
+                                Persona usuario, Integer idVenta, String observacion) {
+        p.setStockActual(p.getStockActual() + cantidad);
+        productoRepository.save(p);
+        InventarioSucursal inv = inventarioSucursalRepository
+                .findByProductoIdProductoAndSucursalIdSucursal(p.getIdProducto(), sucursal.getIdSucursal())
+                .orElse(null);
+        if (inv != null) {
+            inv.setStock(inv.getStock() + cantidad);
+            inventarioSucursalRepository.save(inv);
+
+            movimientoStockRepository.save(MovimientoStock.builder()
+                    .producto(p)
+                    .sucursal(sucursal)
+                    .tipoMovimiento(TipoMovimiento.ENTRADA)
+                    .cantidad(cantidad)
+                    .stockAnterior(inv.getStock() - cantidad)
+                    .stockNuevo(inv.getStock())
+                    .referencia("Venta en Espera #" + idVenta)
+                    .usuario(usuario.getUsuario())
+                    .observacion(observacion)
+                    .build());
+        }
+    }
+
+    @Override
+    @Transactional
     public VentaResponse reanudar(Integer id) {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Venta no encontrada"));

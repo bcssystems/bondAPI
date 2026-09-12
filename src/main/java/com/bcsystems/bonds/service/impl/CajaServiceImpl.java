@@ -31,6 +31,7 @@ public class CajaServiceImpl implements CajaService {
     private final CorteDetallePagoRepository corteDetallePagoRepository;
     private final TipoPagoRepository tipoPagoRepository;
     private final GastoRepository gastoRepository;
+    private final AbonoRepository abonoRepository;
 
     @Override
     public List<CajaResponse> listar() {
@@ -238,17 +239,30 @@ public class CajaServiceImpl implements CajaService {
         double saldoEsperado = saldoInicial + totalVentas + totalIngresos - totalEgresos - totalGastos;
 
         List<VentaPago> pagosEnRango = ventaPagoRepository.findByCajaAndFechaRange(id, apertura, ahora);
-        List<CorteDetallePagoDto> detallePagos = pagosEnRango.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
+        List<Abono> abonosEnRango = abonoRepository
+                .findByCajaIdCajaAndFechaBetweenOrderByFechaDesc(id, apertura, ahora);
+        double totalAbonos = abonosEnRango.stream().mapToDouble(Abono::getMonto).sum();
+
+        java.util.Map<Integer, TipoPago> tipoPorId = pagosEnRango.stream()
+                .map(VentaPago::getTipoPago)
+                .collect(java.util.stream.Collectors.toMap(
+                        TipoPago::getIdTipoPago, tp -> tp,
+                        (a, b) -> a, java.util.LinkedHashMap::new));
+        java.util.Map<Integer, Double> montosPorTipo = new java.util.HashMap<>(
+                pagosEnRango.stream().collect(java.util.stream.Collectors.groupingBy(
                         vp -> vp.getTipoPago().getIdTipoPago(),
-                        java.util.stream.Collectors.summingDouble(VentaPago::getMonto)))
-                .entrySet().stream()
-                .map(e -> {
-                    TipoPago tp = pagosEnRango.stream()
-                            .filter(vp -> vp.getTipoPago().getIdTipoPago().equals(e.getKey()))
-                            .findFirst().get().getTipoPago();
-                    return new CorteDetallePagoDto(e.getKey(), tp.getNombre(), e.getValue(), null);
-                })
+                        java.util.stream.Collectors.summingDouble(VentaPago::getMonto))));
+
+        for (Abono a : abonosEnRango) {
+            if (a.getTipoPago() == null) continue;
+            Integer idTipo = a.getTipoPago().getIdTipoPago();
+            montosPorTipo.merge(idTipo, a.getMonto(), Double::sum);
+            tipoPorId.putIfAbsent(idTipo, a.getTipoPago());
+        }
+
+        List<CorteDetallePagoDto> detallePagos = montosPorTipo.entrySet().stream()
+                .map(e -> new CorteDetallePagoDto(
+                        e.getKey(), tipoPorId.get(e.getKey()).getNombre(), e.getValue(), null))
                 .toList();
 
         double totalReal = 0.0;
@@ -258,7 +272,7 @@ public class CajaServiceImpl implements CajaService {
                 caja.getSucursal().getIdSucursal(), caja.getSucursal().getNombre(),
                 saldoInicial,
                 totalVentas, totalContado, totalCredito,
-                totalIngresos, totalEgresos, totalGastos, caja.getSaldoActual(),
+                totalIngresos, totalEgresos, totalGastos, totalAbonos, caja.getSaldoActual(),
                 saldoEsperado,
                 apertura, ahora, obtenerUsuarioActual(), detallePagos,
                 gastosPeriodo.stream().map(this::toGastoResponse).toList(),
@@ -282,6 +296,7 @@ public class CajaServiceImpl implements CajaService {
                 .totalVentasCredito(preview.totalVentasCredito())
                 .totalIngresos(preview.totalIngresos())
                 .totalEgresos(preview.totalEgresos())
+                .totalAbonos(preview.totalAbonos())
                 .saldoFinalContado(preview.saldoFinalContado())
                 .fechaApertura(preview.fechaApertura())
                 .fechaCierre(LocalDateTime.now())
@@ -317,6 +332,7 @@ public class CajaServiceImpl implements CajaService {
                 preview.saldoInicial(), preview.totalVentas(),
                 preview.totalVentasContado(), preview.totalVentasCredito(),
                 preview.totalIngresos(), preview.totalEgresos(), preview.totalGastos(),
+                preview.totalAbonos(),
                 preview.saldoFinalContado(), preview.saldoEsperado(),
                 preview.fechaApertura(),
                 corte.getFechaCierre(), usuario, preview.detallePagos(),
@@ -370,6 +386,7 @@ public class CajaServiceImpl implements CajaService {
                 corte.getSaldoInicial(), corte.getTotalVentas(),
                 corte.getTotalVentasContado(), corte.getTotalVentasCredito(),
                 corte.getTotalIngresos(), corte.getTotalEgresos(), 0.0,
+                corte.getTotalAbonos() != null ? corte.getTotalAbonos() : 0.0,
                 corte.getSaldoFinalContado(), null,
                 corte.getFechaApertura(), corte.getFechaCierre(),
                 corte.getUsuario().getUsuario(), detallePagos,

@@ -26,8 +26,9 @@ public class PersonaController {
     @GetMapping
     @PreAuthorize("hasAuthority('PERSONAS_VER')")
     public ResponseEntity<Page<PersonaResponse>> listar(
+            @RequestParam(required = false) Boolean activa,
             @PageableDefault(size = 10, sort = "idPersona", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(personaService.listar(pageable));
+        return ResponseEntity.ok(personaService.listar(activa, pageable));
     }
 
     @GetMapping("/{id}")

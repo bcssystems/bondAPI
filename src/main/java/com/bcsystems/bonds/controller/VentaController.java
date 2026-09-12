@@ -1,6 +1,7 @@
 package com.bcsystems.bonds.controller;
 
 import com.bcsystems.bonds.dto.SolicitudCancelacionRequest;
+import com.bcsystems.bonds.dto.VentaEsperaRequest;
 import com.bcsystems.bonds.dto.VentaRequest;
 import com.bcsystems.bonds.dto.VentaResponse;
 import com.bcsystems.bonds.service.VentaService;
@@ -98,6 +99,13 @@ public class VentaController {
     @PreAuthorize("hasAuthority('VENTAS_CREAR')")
     public ResponseEntity<VentaResponse> cancelarEspera(@PathVariable Integer id) {
         return ResponseEntity.ok(ventaService.cancelarEspera(id));
+    }
+
+    @PutMapping("/{id}/espera")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
+    public ResponseEntity<VentaResponse> actualizarEspera(@PathVariable Integer id,
+                                                          @Valid @RequestBody VentaEsperaRequest request) {
+        return ResponseEntity.ok(ventaService.actualizarEspera(id, request));
     }
 
     @GetMapping("/caja/{idCaja}/espera")

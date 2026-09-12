@@ -5,5 +5,6 @@ import jakarta.validation.constraints.NotNull;
 public record AbonoGeneralRequest(
         @NotNull Integer idCliente,
         @NotNull Double monto,
-        Integer idTipoPago
+        Integer idTipoPago,
+        Integer idCaja
 ) {}

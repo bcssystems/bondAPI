@@ -6,5 +6,6 @@ public record AbonoRequest(
         @NotNull Integer idCredito,
         @NotNull Double monto,
         String tipo,
-        Integer idTipoPago
+        Integer idTipoPago,
+        Integer idCaja
 ) {}

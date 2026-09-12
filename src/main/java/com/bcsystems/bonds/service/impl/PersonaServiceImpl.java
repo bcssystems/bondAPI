@@ -53,7 +53,10 @@ public class PersonaServiceImpl implements PersonaService {
     }
 
     @Override
-    public Page<PersonaResponse> listar(Pageable pageable) {
+    public Page<PersonaResponse> listar(Boolean activa, Pageable pageable) {
+        if (activa != null) {
+            return personaRepository.findByActiva(activa, pageable).map(this::toResponse);
+        }
         return personaRepository.findAll(pageable).map(this::toResponse);
     }
 

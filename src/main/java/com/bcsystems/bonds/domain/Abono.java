@@ -42,4 +42,8 @@ public class Abono {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_tipo_pago")
     private TipoPago tipoPago;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_caja")
+    private Caja caja;
 }

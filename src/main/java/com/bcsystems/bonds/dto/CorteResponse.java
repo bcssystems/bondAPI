@@ -16,6 +16,7 @@ public record CorteResponse(
         Double totalIngresos,
         Double totalEgresos,
         Double totalGastos,
+        Double totalAbonos,
         Double saldoFinalContado,
         Double saldoEsperado,
         LocalDateTime fechaApertura,
