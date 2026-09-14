@@ -17,6 +17,7 @@ public record CotizacionRequest(
         String tipoVenta,
         Integer plazoMeses,
         Double porcentajeInteres,
+        String nota,
         @NotEmpty @Valid List<Detalle> detalles
 ) {
     public record Detalle(

@@ -49,6 +49,9 @@ public class Cotizacion {
     @Column(nullable = false)
     private Double total;
 
+    @Column(length = 500)
+    private String nota;
+
     @Column(nullable = false, length = 10)
     @Builder.Default
     private String tipoVenta = "CONTADO";

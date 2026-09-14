@@ -21,5 +21,6 @@ public record CotizacionResponse(
         String tipoVenta,
         Integer plazoMeses,
         Double porcentajeInteres,
+        String nota,
         List<CotizacionDetalleResponse> detalles
 ) {}
