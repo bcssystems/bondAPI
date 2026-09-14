@@ -44,13 +44,17 @@ public class ClienteServiceImpl implements ClienteService {
     private String uploadDir;
 
     @Override
-    public Page<ClienteResponse> listar(String search, int page, int size) {
+    public Page<ClienteResponse> listar(String search, Boolean activo, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("nombre"));
         Page<Cliente> clientes;
-        if (search != null && !search.isBlank()) {
-            clientes = clienteRepository.buscar(search, pageable);
+        if (activo == null) {
+            if (search != null && !search.isBlank()) {
+                clientes = clienteRepository.buscar(search, pageable);
+            } else {
+                clientes = clienteRepository.findActivos(pageable);
+            }
         } else {
-            clientes = clienteRepository.findActivos(pageable);
+            clientes = clienteRepository.buscarConActivo(search, activo, pageable);
         }
         return clientes.map(this::toResponse);
     }

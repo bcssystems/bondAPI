@@ -17,6 +17,14 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
            "ORDER BY c.nombre")
     Page<Cliente> buscar(@Param("search") String search, Pageable pageable);
 
+    @Query("SELECT c FROM Cliente c WHERE " +
+           "(:activo IS NULL OR c.activo = :activo) AND " +
+           "(:search IS NULL OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(c.apellidoPaterno) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(c.telefono) LIKE CONCAT('%', :search, '%')) " +
+           "ORDER BY c.nombre")
+    Page<Cliente> buscarConActivo(@Param("search") String search, @Param("activo") Boolean activo, Pageable pageable);
+
     @Query("SELECT c FROM Cliente c WHERE c.activo = true ORDER BY c.nombre")
     Page<Cliente> findActivos(Pageable pageable);
 

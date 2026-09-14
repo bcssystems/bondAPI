@@ -25,5 +25,6 @@ public record CorteResponse(
         List<CorteDetallePagoDto> detallePagos,
         List<GastoResponse> gastos,
         Double totalReal,
-        Double diferencia
+        Double diferencia,
+        List<AbonoCorteDto> abonos
 ) {}

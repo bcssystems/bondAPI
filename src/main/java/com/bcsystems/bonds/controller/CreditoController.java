@@ -27,7 +27,7 @@ public class CreditoController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         if (search != null && !search.isBlank()) {
-            return ResponseEntity.ok(clienteService.listar(search, page, size));
+            return ResponseEntity.ok(clienteService.listar(search, true, page, size));
         }
         return ResponseEntity.ok(clienteService.listarCreditClients(page, size));
     }

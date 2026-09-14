@@ -27,6 +27,13 @@ public class CotizacionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(cotizacionService.crear(request));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('COTIZACIONES_CREAR')")
+    public ResponseEntity<CotizacionResponse> actualizar(@PathVariable Integer id,
+                                                         @Valid @RequestBody CotizacionRequest request) {
+        return ResponseEntity.ok(cotizacionService.actualizar(id, request));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('COTIZACIONES_VER','VENTAS_VER')")
     public ResponseEntity<CotizacionResponse> obtenerPorId(@PathVariable Integer id) {

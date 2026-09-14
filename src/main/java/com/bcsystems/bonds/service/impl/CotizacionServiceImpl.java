@@ -90,6 +90,60 @@ public class CotizacionServiceImpl implements CotizacionService {
     }
 
     @Override
+    @Transactional
+    public CotizacionResponse actualizar(Integer id, CotizacionRequest request) {
+        Cotizacion cotizacion = cotizacionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Cotización no encontrada"));
+        if (cotizacion.getEstado() != EstadoCotizacion.VIGENTE) {
+            throw new InvalidEntryException("Solo se pueden modificar cotizaciones vigentes");
+        }
+
+        if (request.detalles() == null || request.detalles().isEmpty()) {
+            throw new InvalidEntryException("La cotización debe tener al menos un producto");
+        }
+
+        Double totalProductos = 0.0;
+        for (CotizacionRequest.Detalle d : request.detalles()) {
+            totalProductos += d.precioUnitario() * d.cantidad();
+        }
+
+        Double montoEnvio = (request.cobraEnvio() != null && request.cobraEnvio())
+                ? (request.montoEnvio() != null ? request.montoEnvio() : 0.0) : 0.0;
+        Boolean cobraEnvio = request.cobraEnvio() != null ? request.cobraEnvio() : false;
+        Integer precioSeleccionado = request.precioSeleccionado() != null ? request.precioSeleccionado() : 1;
+
+        cotizacion.setPaqueteria(request.paqueteria());
+        cotizacion.setCobraEnvio(cobraEnvio);
+        cotizacion.setMontoEnvio(montoEnvio);
+        cotizacion.setPrecioSeleccionado(precioSeleccionado);
+        cotizacion.setDiasVigencia(request.diasVigencia());
+        cotizacion.setTotal(totalProductos + montoEnvio);
+        cotizacion.setTipoVenta(request.tipoVenta() != null ? request.tipoVenta() : "CONTADO");
+        cotizacion.setPlazoMeses(request.plazoMeses());
+        cotizacion.setPorcentajeInteres(request.porcentajeInteres() != null ? request.porcentajeInteres() : 0.0);
+        cotizacion.setFechaExpiracion(LocalDateTime.now().plusDays(request.diasVigencia()));
+
+        cotizacion.getDetalles().clear();
+        for (CotizacionRequest.Detalle d : request.detalles()) {
+            Producto producto = productoRepository.findById(d.idProducto())
+                    .orElseThrow(() -> new NotFoundException("Producto no encontrado: " + d.idProducto()));
+
+            Double subtotal = d.precioUnitario() * d.cantidad();
+            CotizacionDetalle detalle = CotizacionDetalle.builder()
+                    .cotizacion(cotizacion)
+                    .producto(producto)
+                    .cantidad(d.cantidad())
+                    .precioUnitario(d.precioUnitario())
+                    .subtotal(subtotal)
+                    .build();
+            cotizacion.getDetalles().add(detalle);
+        }
+
+        cotizacion = cotizacionRepository.save(cotizacion);
+        return toResponse(cotizacion);
+    }
+
+    @Override
     public List<CotizacionResponse> listarTodas() {
         return cotizacionRepository.findAllByOrderByFechaCreacionDesc().stream()
                 .map(this::toResponse).toList();

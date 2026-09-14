@@ -1,9 +1,11 @@
 package com.bcsystems.bonds.controller;
 
 import com.bcsystems.bonds.domain.CorteCaja;
+import com.bcsystems.bonds.dto.AbonoCorteDto;
 import com.bcsystems.bonds.dto.CorteDetallePagoDto;
 import com.bcsystems.bonds.dto.CorteDetallePagoUpdateRequest;
 import com.bcsystems.bonds.dto.CorteResponse;
+import com.bcsystems.bonds.repository.AbonoRepository;
 import com.bcsystems.bonds.repository.CorteCajaRepository;
 import com.bcsystems.bonds.repository.CorteDetallePagoRepository;
 import com.bcsystems.bonds.service.CajaService;
@@ -24,13 +26,16 @@ public class CorteController {
 
     private final CorteCajaRepository corteCajaRepository;
     private final CorteDetallePagoRepository corteDetallePagoRepository;
+    private final AbonoRepository abonoRepository;
     private final CajaService cajaService;
 
     public CorteController(CorteCajaRepository corteCajaRepository,
                            CorteDetallePagoRepository corteDetallePagoRepository,
+                           AbonoRepository abonoRepository,
                            CajaService cajaService) {
         this.corteCajaRepository = corteCajaRepository;
         this.corteDetallePagoRepository = corteDetallePagoRepository;
+        this.abonoRepository = abonoRepository;
         this.cajaService = cajaService;
     }
 
@@ -76,6 +81,28 @@ public class CorteController {
                 .sum();
         double sistema = detallePagos.stream().mapToDouble(CorteDetallePagoDto::monto).sum();
         double diferencia = totalReal > 0 ? totalReal - sistema : 0.0;
+
+        List<AbonoCorteDto> abonosList = (c.getCaja() != null && c.getFechaApertura() != null
+                && c.getFechaCierre() != null)
+                ? abonoRepository
+                        .findByCajaIdCajaAndFechaBetweenOrderByFechaDesc(
+                                c.getCaja().getIdCaja(),
+                                c.getFechaApertura(), c.getFechaCierre())
+                        .stream().map(a -> new AbonoCorteDto(
+                                a.getIdAbono(),
+                                a.getCredito() != null ? a.getCredito().getIdCredito() : null,
+                                a.getCredito() != null ? a.getCredito().getFolio() : null,
+                                a.getCredito() != null && a.getCredito().getCliente() != null
+                                        ? a.getCredito().getCliente().getIdCliente() : null,
+                                a.getCredito() != null && a.getCredito().getCliente() != null
+                                        ? a.getCredito().getCliente().getNombre() + " "
+                                          + a.getCredito().getCliente().getApellidoPaterno() : null,
+                                a.getFecha(),
+                                a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
+                                a.getMonto()))
+                        .toList()
+                : java.util.List.of();
+
         return new CorteResponse(
                 c.getIdCorte(), c.getCaja().getIdCaja(), c.getCaja().getNombre(),
                 c.getCaja().getSucursal().getIdSucursal(), c.getCaja().getSucursal().getNombre(),
@@ -88,6 +115,7 @@ public class CorteController {
                 c.getUsuario().getUsuario(), detallePagos,
                 java.util.List.of(),
                 totalReal > 0 ? totalReal : null,
-                totalReal > 0 ? diferencia : null);
+                totalReal > 0 ? diferencia : null,
+                abonosList);
     }
 }

@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface ClienteService {
-    Page<ClienteResponse> listar(String search, int page, int size);
+    Page<ClienteResponse> listar(String search, Boolean activo, int page, int size);
     Page<ClienteResponse> listarCreditClients(int page, int size);
     ClienteResponse obtenerPorId(Integer id);
     ClienteResponse crear(ClienteRequest request);

@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface CotizacionService {
     CotizacionResponse crear(CotizacionRequest request);
+    CotizacionResponse actualizar(Integer id, CotizacionRequest request);
     CotizacionResponse obtenerPorId(Integer id);
     List<CotizacionResponse> listarTodas();
     List<CotizacionResponse> listarPorEstado(String estado);

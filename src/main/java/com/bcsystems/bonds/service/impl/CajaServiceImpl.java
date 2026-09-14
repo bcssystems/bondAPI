@@ -268,6 +268,21 @@ public class CajaServiceImpl implements CajaService {
         double totalReal = 0.0;
         double diferencia = 0.0;
 
+        List<AbonoCorteDto> abonosList = abonosEnRango.stream()
+                .map(a -> new AbonoCorteDto(
+                        a.getIdAbono(),
+                        a.getCredito() != null ? a.getCredito().getIdCredito() : null,
+                        a.getCredito() != null ? a.getCredito().getFolio() : null,
+                        a.getCredito() != null && a.getCredito().getCliente() != null
+                                ? a.getCredito().getCliente().getIdCliente() : null,
+                        a.getCredito() != null && a.getCredito().getCliente() != null
+                                ? a.getCredito().getCliente().getNombre() + " "
+                                  + a.getCredito().getCliente().getApellidoPaterno() : null,
+                        a.getFecha(),
+                        a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
+                        a.getMonto()))
+                .toList();
+
         return new CorteResponse(null, id, caja.getNombre(),
                 caja.getSucursal().getIdSucursal(), caja.getSucursal().getNombre(),
                 saldoInicial,
@@ -276,7 +291,7 @@ public class CajaServiceImpl implements CajaService {
                 saldoEsperado,
                 apertura, ahora, obtenerUsuarioActual(), detallePagos,
                 gastosPeriodo.stream().map(this::toGastoResponse).toList(),
-                totalReal, diferencia);
+                totalReal, diferencia, abonosList);
     }
 
     @Override
@@ -337,7 +352,8 @@ public class CajaServiceImpl implements CajaService {
                 preview.fechaApertura(),
                 corte.getFechaCierre(), usuario, preview.detallePagos(),
                 preview.gastos(),
-                preview.totalReal(), preview.diferencia());
+                preview.totalReal(), preview.diferencia(),
+                preview.abonos());
     }
 
     @Override
@@ -380,6 +396,15 @@ public class CajaServiceImpl implements CajaService {
                 .sum();
         double sistema = detallePagos.stream().mapToDouble(CorteDetallePagoDto::monto).sum();
         double diferencia = totalReal > 0 ? totalReal - sistema : 0.0;
+
+        List<AbonoCorteDto> abonosList = (corte.getCaja() != null && corte.getFechaApertura() != null
+                && corte.getFechaCierre() != null)
+                ? abonoRepository
+                        .findByCajaIdCajaAndFechaBetweenOrderByFechaDesc(corte.getCaja().getIdCaja(),
+                                corte.getFechaApertura(), corte.getFechaCierre())
+                        .stream().map(this::toAbonoCorteDto).toList()
+                : java.util.List.of();
+
         return new CorteResponse(
                 corte.getIdCorte(), corte.getCaja().getIdCaja(), corte.getCaja().getNombre(),
                 corte.getCaja().getSucursal().getIdSucursal(), corte.getCaja().getSucursal().getNombre(),
@@ -392,7 +417,29 @@ public class CajaServiceImpl implements CajaService {
                 corte.getUsuario().getUsuario(), detallePagos,
                 java.util.List.of(),
                 totalReal > 0 ? totalReal : null,
-                totalReal > 0 ? diferencia : null);
+                totalReal > 0 ? diferencia : null,
+                abonosList);
+    }
+
+    private AbonoCorteDto toAbonoCorteDto(Abono a) {
+        String cliente = null;
+        Integer idCredito = null;
+        Integer idCliente = null;
+        String folio = null;
+        if (a.getCredito() != null) {
+            idCredito = a.getCredito().getIdCredito();
+            folio = a.getCredito().getFolio();
+            if (a.getCredito().getCliente() != null) {
+                idCliente = a.getCredito().getCliente().getIdCliente();
+                cliente = a.getCredito().getCliente().getNombre() + " "
+                        + a.getCredito().getCliente().getApellidoPaterno();
+            }
+        }
+        return new AbonoCorteDto(
+                a.getIdAbono(), idCredito, folio, idCliente, cliente,
+                a.getFecha(),
+                a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
+                a.getMonto());
     }
 
     private GastoResponse toGastoResponse(Gasto g) {

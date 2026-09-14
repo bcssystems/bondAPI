@@ -26,16 +26,17 @@ public class ClienteController {
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('CLIENTES_VER')")
     public ResponseEntity<?> stats() {
-        return ResponseEntity.ok(clienteService.listar(null, 0, 1));
+        return ResponseEntity.ok(clienteService.listar(null, null, 0, 1));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('CLIENTES_VER')")
     public ResponseEntity<Page<ClienteResponse>> listar(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean activo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(clienteService.listar(search, page, size));
+        return ResponseEntity.ok(clienteService.listar(search, activo, page, size));
     }
 
     @GetMapping("/lista-negra")

@@ -9,6 +9,7 @@ import com.bcsystems.bonds.exception.NotFoundException;
 import com.bcsystems.bonds.repository.CajaRepository;
 import com.bcsystems.bonds.repository.InventarioSucursalRepository;
 import com.bcsystems.bonds.repository.ReservaProductoRepository;
+import com.bcsystems.bonds.repository.VentaDetalleRepository;
 import com.bcsystems.bonds.service.ReservaProductoService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -23,13 +24,16 @@ public class ReservaProductoServiceImpl implements ReservaProductoService {
     private final ReservaProductoRepository reservaProductoRepository;
     private final CajaRepository cajaRepository;
     private final InventarioSucursalRepository inventarioSucursalRepository;
+    private final VentaDetalleRepository ventaDetalleRepository;
 
     public ReservaProductoServiceImpl(ReservaProductoRepository reservaProductoRepository,
                                       CajaRepository cajaRepository,
-                                      InventarioSucursalRepository inventarioSucursalRepository) {
+                                      InventarioSucursalRepository inventarioSucursalRepository,
+                                      VentaDetalleRepository ventaDetalleRepository) {
         this.reservaProductoRepository = reservaProductoRepository;
         this.cajaRepository = cajaRepository;
         this.inventarioSucursalRepository = inventarioSucursalRepository;
+        this.ventaDetalleRepository = ventaDetalleRepository;
     }
 
     @Override
@@ -120,6 +124,10 @@ public class ReservaProductoServiceImpl implements ReservaProductoService {
                 .orElse(null);
 
         int stockDisponible = inv != null ? inv.getStock() : 0;
+
+        Integer cantidadEnEspera = ventaDetalleRepository
+                .sumCantidadEnEspera(idProducto, idSucursal);
+        stockDisponible += cantidadEnEspera;
 
         if (totalReservado > stockDisponible) {
             throw new InvalidEntryException("Stock insuficiente en la sucursal"
