@@ -17,5 +17,6 @@ public record VentaRequest(
         Integer plazoMeses,
         Double porcentajeInteres,
         @NotEmpty List<VentaDetalleRequest> detalles,
-        List<VentaPagoRequest> pagos
+        List<VentaPagoRequest> pagos,
+        Boolean enviandoPedido
 ) {}

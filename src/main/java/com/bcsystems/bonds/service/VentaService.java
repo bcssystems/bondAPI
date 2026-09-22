@@ -1,6 +1,7 @@
 package com.bcsystems.bonds.service;
 
 import com.bcsystems.bonds.dto.VentaEsperaRequest;
+import com.bcsystems.bonds.dto.VentaPagoRequest;
 import com.bcsystems.bonds.dto.VentaRequest;
 import com.bcsystems.bonds.dto.VentaResponse;
 import org.springframework.data.domain.Page;
@@ -23,5 +24,6 @@ public interface VentaService {
     VentaResponse actualizarEspera(Integer id, VentaEsperaRequest request);
     List<VentaResponse> ventasEnEspera(Integer idCaja);
     List<VentaResponse> listarPorSucursal(Integer idSucursal);
+    VentaResponse registrarPago(Integer id, List<VentaPagoRequest> pagos);
     VentaResponse ventaRapida(Integer idCaja, String descripcion, Double precioCompra, Double precioVenta, Integer cantidad, Integer idCliente);
 }

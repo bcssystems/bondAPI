@@ -2,6 +2,7 @@ package com.bcsystems.bonds.controller;
 
 import com.bcsystems.bonds.dto.SolicitudCancelacionRequest;
 import com.bcsystems.bonds.dto.VentaEsperaRequest;
+import com.bcsystems.bonds.dto.VentaPagoRequest;
 import com.bcsystems.bonds.dto.VentaRequest;
 import com.bcsystems.bonds.dto.VentaResponse;
 import com.bcsystems.bonds.service.VentaService;
@@ -75,6 +76,13 @@ public class VentaController {
     public ResponseEntity<VentaResponse> solicitarCancelacion(
             @PathVariable Integer id, @Valid @RequestBody SolicitudCancelacionRequest request) {
         return ResponseEntity.ok(ventaService.solicitarCancelacion(id, request.motivo()));
+    }
+
+    @PostMapping("/{id}/pagar")
+    @PreAuthorize("hasAuthority('VENTAS_CREAR')")
+    public ResponseEntity<VentaResponse> registrarPago(@PathVariable Integer id,
+                                                       @Valid @RequestBody List<VentaPagoRequest> pagos) {
+        return ResponseEntity.ok(ventaService.registrarPago(id, pagos));
     }
 
     @PostMapping("/{id}/rechazar-cancelacion")

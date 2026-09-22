@@ -61,6 +61,14 @@ public class VentaServiceImpl implements VentaService {
             throw new InvalidEntryException("El cliente está en lista negra y no puede realizar compras a crédito");
         }
 
+        boolean enviandoPedido = Boolean.TRUE.equals(request.enviandoPedido());
+        if (enviandoPedido && !TipoVenta.CONTADO.name().equals(request.tipoVenta())) {
+            throw new InvalidEntryException("Una venta en envío de pedido solo puede ser de contado");
+        }
+        if (enviandoPedido && request.pagos() != null && !request.pagos().isEmpty()) {
+            throw new InvalidEntryException("Una venta en envío de pedido no puede registrar pagos al crearse");
+        }
+
         Venta venta = Venta.builder()
                 .caja(caja)
                 .cliente(cliente)
@@ -71,7 +79,7 @@ public class VentaServiceImpl implements VentaService {
                 .descuento(request.descuento())
                 .total(request.total())
                 .nota(request.nota())
-                .estado(EstadoVenta.COMPLETADA)
+                .estado(enviandoPedido ? EstadoVenta.ENVIANDO_PEDIDO : EstadoVenta.COMPLETADA)
                 .fecha(LocalDateTime.now())
                 .build();
         venta = ventaRepository.save(venta);
@@ -225,8 +233,10 @@ public class VentaServiceImpl implements VentaService {
             cliente.setSaldoActual((cliente.getSaldoActual() != null ? cliente.getSaldoActual() : 0) + montoOriginal);
             clienteRepository.save(cliente);
         } else {
-            caja.setSaldoActual(caja.getSaldoActual() + request.total());
-            cajaRepository.save(caja);
+            if (!enviandoPedido) {
+                caja.setSaldoActual(caja.getSaldoActual() + request.total());
+                cajaRepository.save(caja);
+            }
         }
 
         reservaProductoRepository.deleteByCajaIdCaja(request.idCaja());
@@ -266,8 +276,9 @@ public class VentaServiceImpl implements VentaService {
     public VentaResponse solicitarCancelacion(Integer id, String motivo) {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
-        if (venta.getEstado() != EstadoVenta.COMPLETADA) {
-            throw new InvalidEntryException("Solo se pueden solicitar cancelaciones de ventas completadas");
+        if (venta.getEstado() != EstadoVenta.COMPLETADA
+                && venta.getEstado() != EstadoVenta.ENVIANDO_PEDIDO) {
+            throw new InvalidEntryException("Solo se pueden solicitar cancelaciones de ventas completadas o en envío de pedido");
         }
         Persona solicitante = obtenerPersonaActual();
         if (motivo == null || motivo.isBlank()) {
@@ -333,9 +344,12 @@ public class VentaServiceImpl implements VentaService {
         }
 
         if (venta.getTipoVenta() == TipoVenta.CONTADO) {
-            Caja caja = venta.getCaja();
-            caja.setSaldoActual(caja.getSaldoActual() - venta.getTotal());
-            cajaRepository.save(caja);
+            boolean tienePagos = !ventaPagoRepository.findByVentaIdVenta(id).isEmpty();
+            if (tienePagos) {
+                Caja caja = venta.getCaja();
+                caja.setSaldoActual(caja.getSaldoActual() - venta.getTotal());
+                cajaRepository.save(caja);
+            }
         } else if (venta.getTipoVenta() == TipoVenta.CREDITO) {
             creditoRepository.findByVentaIdVenta(id).ifPresent(credito -> {
                 if (credito.getEstado() == EstadoCredito.ACTIVO || credito.getEstado() == EstadoCredito.VENCIDO) {
@@ -558,17 +572,64 @@ public class VentaServiceImpl implements VentaService {
 
     @Override
     public List<VentaResponse> ventasEnEspera(Integer idCaja) {
-        return ventaRepository.findByCajaIdCajaAndEstadoOrderByFechaDesc(idCaja, EstadoVenta.ESPERA)
+        return ventaRepository.findByCajaIdCajaAndEstadoInOrderByFechaDesc(
+                        idCaja, List.of(EstadoVenta.ESPERA, EstadoVenta.ENVIANDO_PEDIDO))
                 .stream().map(v -> toResponse(v, ventaDetalleRepository.findByVentaIdVenta(v.getIdVenta())))
                 .toList();
     }
 
     @Override
     public List<VentaResponse> listarPorSucursal(Integer idSucursal) {
-        return ventaRepository.findByCajaSucursalIdSucursalAndEstadoOrderByFechaDesc(idSucursal, EstadoVenta.COMPLETADA)
+        return ventaRepository.findByCajaSucursalIdSucursalAndEstadoInOrderByFechaDesc(
+                        idSucursal,
+                        List.of(EstadoVenta.COMPLETADA, EstadoVenta.ENVIANDO_PEDIDO, EstadoVenta.CANCELADA))
                 .stream().limit(50)
                 .map(v -> toResponse(v, ventaDetalleRepository.findByVentaIdVenta(v.getIdVenta())))
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public VentaResponse registrarPago(Integer id, List<VentaPagoRequest> pagos) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
+        if (venta.getEstado() != EstadoVenta.ENVIANDO_PEDIDO) {
+            throw new InvalidEntryException("La venta no está como envío de pedido");
+        }
+        if (venta.getTipoVenta() != TipoVenta.CONTADO) {
+            throw new InvalidEntryException("Una venta en envío de pedido solo puede ser de contado");
+        }
+        if (pagos == null || pagos.isEmpty()) {
+            throw new InvalidEntryException("Debe indicar al menos una forma de pago");
+        }
+        double sumaPagos = pagos.stream().mapToDouble(VentaPagoRequest::monto).sum();
+        if (sumaPagos + 0.01 < venta.getTotal()) {
+            throw new InvalidEntryException("La suma de los pagos ($" + String.format("%.2f", sumaPagos)
+                    + ") es menor al total de la venta ($" + String.format("%.2f", venta.getTotal()) + ")");
+        }
+        for (VentaPagoRequest pagoReq : pagos) {
+            TipoPago tipoPago = tipoPagoRepository.findById(pagoReq.idTipoPago())
+                    .orElseThrow(() -> new NotFoundException("Tipo de pago no encontrado"));
+            VentaPago pago = VentaPago.builder()
+                    .venta(venta)
+                    .tipoPago(tipoPago)
+                    .monto(pagoReq.monto())
+                    .referencia(pagoReq.referencia())
+                    .build();
+            ventaPagoRepository.save(pago);
+        }
+        venta.setEstado(EstadoVenta.COMPLETADA);
+        ventaRepository.save(venta);
+
+        Persona usuario = obtenerPersonaActual();
+        Caja caja = venta.getCaja();
+        caja.setSaldoActual(caja.getSaldoActual() + venta.getTotal());
+        cajaRepository.save(caja);
+
+        auditoriaService.registrar("Venta", id, AccionAuditoria.ACTUALIZACION.name(),
+                usuario.getUsuario(), "Pago registrado - Venta #" + id);
+
+        return toResponse(venta, ventaDetalleRepository.findByVentaIdVenta(id));
     }
 
     @Override
@@ -675,6 +736,8 @@ public class VentaServiceImpl implements VentaService {
                 credito != null ? credito.getPorcentajeInteres() : null,
                 v.getMotivoCancelacion(),
                 v.getSolicitanteCancelacion() != null ? v.getSolicitanteCancelacion().getUsuario() : null,
-                v.getFechaSolicitudCancelacion());
+                v.getFechaSolicitudCancelacion(),
+                v.getAutorizadorCancelacion() != null ? v.getAutorizadorCancelacion().getUsuario() : null,
+                v.getFechaAutorizacionCancelacion());
     }
 }

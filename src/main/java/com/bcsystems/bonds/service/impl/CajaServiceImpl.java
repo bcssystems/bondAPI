@@ -134,6 +134,10 @@ public class CajaServiceImpl implements CajaService {
         if (caja.getEstado() == CajaEstado.CERRADA) {
             throw new InvalidEntryException("La caja ya está cerrada");
         }
+        if (caja.getTipo() == TipoCaja.CHICA) {
+            realizarCorte(id);
+            return toResponse(buscarOExcepcion(id));
+        }
         caja.setEstado(CajaEstado.CERRADA);
         caja.setFechaCierre(LocalDateTime.now());
         caja = cajaRepository.save(caja);

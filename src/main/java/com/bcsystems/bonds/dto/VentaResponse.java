@@ -27,5 +27,7 @@ public record VentaResponse(
         Double porcentajeInteres,
         String motivoCancelacion,
         String solicitanteCancelacion,
-        LocalDateTime fechaSolicitudCancelacion
+        LocalDateTime fechaSolicitudCancelacion,
+        String autorizadorCancelacion,
+        LocalDateTime fechaAutorizacionCancelacion
 ) {}

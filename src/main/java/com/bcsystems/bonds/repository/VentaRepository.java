@@ -13,6 +13,7 @@ import java.util.List;
 
 public interface VentaRepository extends JpaRepository<Venta, Integer> {
     List<Venta> findByCajaIdCajaAndEstadoOrderByFechaDesc(Integer idCaja, EstadoVenta estado);
+    List<Venta> findByCajaIdCajaAndEstadoInOrderByFechaDesc(Integer idCaja, List<EstadoVenta> estados);
     List<Venta> findByCajaIdCajaAndEstadoAndFechaBetweenOrderByFechaDesc(
             Integer idCaja, EstadoVenta estado, LocalDateTime inicio, LocalDateTime fin);
     List<Venta> findByCajaIdCajaAndFechaBetweenOrderByFechaDesc(
@@ -20,6 +21,8 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
 
     List<Venta> findByCajaSucursalIdSucursalAndEstadoOrderByFechaDesc(
             Integer idSucursal, EstadoVenta estado);
+    List<Venta> findByCajaSucursalIdSucursalAndEstadoInOrderByFechaDesc(
+            Integer idSucursal, List<EstadoVenta> estados);
 
     @Query("""
         SELECT v FROM Venta v
