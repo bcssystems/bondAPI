@@ -44,26 +44,32 @@ public class DataSeedRunner implements CommandLineRunner {
         Map<String, List<String[]>> permisosPorModulo = buildCatalogo();
 
         Map<String, Permiso> permisoMap = new HashMap<>();
-        if (permisoRepository.count() == 0) {
-            for (var entry : permisosPorModulo.entrySet()) {
-                String modulo = entry.getKey();
-                for (String[] perm : entry.getValue()) {
-                    Permiso p = Permiso.builder()
-                            .clave(perm[0])
+        List<Permiso> nuevosPermisos = new ArrayList<>();
+        for (var entry : permisosPorModulo.entrySet()) {
+            String modulo = entry.getKey();
+            for (String[] perm : entry.getValue()) {
+                String clave = perm[0];
+                Permiso p = permisoRepository.findByClave(clave).orElse(null);
+                if (p == null) {
+                    p = Permiso.builder()
+                            .clave(clave)
                             .nombre(perm[1])
                             .descripcion(perm[1] + " en " + modulo)
                             .modulo(modulo)
                             .activo(true)
                             .build();
                     p = permisoRepository.save(p);
-                    permisoMap.put(p.getClave(), p);
+                    nuevosPermisos.add(p);
                 }
+                permisoMap.put(clave, p);
             }
-        } else {
-            permisoRepository.findAll().forEach(p -> permisoMap.put(p.getClave(), p));
         }
+        permisoRepository.findAll().forEach(p -> permisoMap.put(p.getClave(), p));
 
         Set<Permiso> todosLosPermisos = new HashSet<>(permisoMap.values());
+
+        reasignarPermisosExistentes(rolRepository.findAll(),
+                nuevosPermisos, todosLosPermisos);
 
         Map<String, Set<Permiso>> permisosPorRol = new LinkedHashMap<>();
         permisosPorRol.put("ADMINISTRADOR", todosLosPermisos);
@@ -104,6 +110,38 @@ public class DataSeedRunner implements CommandLineRunner {
                     .permisos(permisos.isEmpty() ? new ArrayList<>(todosLosPermisos) : new ArrayList<>(permisos))
                     .build();
             rolRepository.save(rol);
+        }
+    }
+
+    private void reasignarPermisosExistentes(List<Rol> rolesExistentes,
+                                             List<Permiso> nuevosPermisos,
+                                             Set<Permiso> todosLosPermisos) {
+        if (rolesExistentes == null || rolesExistentes.isEmpty()) return;
+        for (Rol rol : rolesExistentes) {
+            boolean esAdmin = rol.getNombre().equalsIgnoreCase("ADMINISTRADOR")
+                    || rol.getNombre().equalsIgnoreCase("SISTEMAS");
+            List<Permiso> permisosRol = rol.getPermisos() != null
+                    ? new ArrayList<>(rol.getPermisos()) : new ArrayList<>();
+            boolean cambio = false;
+            if (esAdmin) {
+                Set<Permiso> objetivo = new HashSet<>(todosLosPermisos);
+                if (objetivo.containsAll(permisosRol) && objetivo.size() == permisosRol.size()) {
+                    continue;
+                }
+                permisosRol = new ArrayList<>(objetivo);
+                cambio = true;
+            } else {
+                for (Permiso p : nuevosPermisos) {
+                    if (!permisosRol.contains(p)) {
+                        permisosRol.add(p);
+                        cambio = true;
+                    }
+                }
+            }
+            if (cambio) {
+                rol.setPermisos(permisosRol);
+                rolRepository.save(rol);
+            }
         }
     }
 

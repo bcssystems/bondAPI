@@ -187,9 +187,6 @@ public class VentaServiceImpl implements VentaService {
             if (cliente.getTieneCredito() == null || !cliente.getTieneCredito()) {
                 throw new InvalidEntryException("El cliente no tiene credito habilitado");
             }
-            if (!clienteIneRepository.findByClienteIdCliente(cliente.getIdCliente()).isPresent()) {
-                throw new InvalidEntryException("El cliente debe tener INE registrada para venta a credito");
-            }
             if (cliente.getLimiteCredito() != null && cliente.getLimiteCredito() > 0) {
                 double disponible = cliente.getLimiteCredito()
                         - (cliente.getSaldoActual() != null ? cliente.getSaldoActual() : 0);
