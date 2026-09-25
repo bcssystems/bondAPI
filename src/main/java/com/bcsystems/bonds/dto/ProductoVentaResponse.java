@@ -12,9 +12,7 @@ public record ProductoVentaResponse(
     Boolean activo,
     String unidadMedida,
     Double metrosPorRollo,
-    List<MultimediaResponse> multimedia,
     List<InventarioSucursalResponse> inventarioSucursales
 ) {
-    public record MultimediaResponse(Integer idMultimedia, String tipo, String url, String nombreArchivo, Boolean esPrincipal) {}
     public record InventarioSucursalResponse(Integer id, Integer idSucursal, String sucursalNombre, Integer stock, Integer stockMinimo, Integer stockMaximo) {}
 }

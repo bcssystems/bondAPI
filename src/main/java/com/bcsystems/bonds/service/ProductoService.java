@@ -3,7 +3,6 @@ package com.bcsystems.bonds.service;
 import com.bcsystems.bonds.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 public interface ProductoService {
     Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Integer idCategoria, Pageable pageable);
@@ -13,9 +12,6 @@ public interface ProductoService {
     ProductoResponse actualizar(Integer id, ProductoRequest request);
     void eliminar(Integer id);
     void reactivar(Integer id);
-    ProductoResponse agregarMultimedia(Integer idProducto, MultipartFile archivo, Boolean esPrincipal);
-    void eliminarMultimedia(Integer idMultimedia);
-    ProductoResponse marcarMultimediaPrincipal(Integer idProducto, Integer idMultimedia);
     ProductoResponse actualizarStockSucursal(Integer idProducto, Integer idSucursal, Integer nuevoStock);
     ProductoResponse registrarMovimientoStock(Integer idProducto, MovimientoStockRequest request);
     ProductoResponse transferirStock(Integer idProducto, TransferenciaRequest request);

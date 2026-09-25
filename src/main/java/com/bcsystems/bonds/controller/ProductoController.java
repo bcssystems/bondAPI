@@ -8,11 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -90,29 +88,6 @@ public class ProductoController {
     public ResponseEntity<Void> reactivar(@PathVariable Integer id) {
         productoService.reactivar(id);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/{id}/multimedia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('PRODUCTOS_EDITAR')")
-    public ResponseEntity<ProductoResponse> agregarMultimedia(
-            @PathVariable Integer id,
-            @RequestParam("archivo") MultipartFile archivo,
-            @RequestParam(defaultValue = "false") Boolean esPrincipal) {
-        return ResponseEntity.ok(productoService.agregarMultimedia(id, archivo, esPrincipal));
-    }
-
-    @DeleteMapping("/multimedia/{idMultimedia}")
-    @PreAuthorize("hasAuthority('PRODUCTOS_EDITAR')")
-    public ResponseEntity<Void> eliminarMultimedia(@PathVariable Integer idMultimedia) {
-        productoService.eliminarMultimedia(idMultimedia);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/multimedia/{idMultimedia}/principal")
-    @PreAuthorize("hasAuthority('PRODUCTOS_EDITAR')")
-    public ResponseEntity<ProductoResponse> marcarPrincipal(
-            @PathVariable Integer id, @PathVariable Integer idMultimedia) {
-        return ResponseEntity.ok(productoService.marcarMultimediaPrincipal(id, idMultimedia));
     }
 
     @PutMapping("/{idProducto}/inventario-sucursal/{idSucursal}")

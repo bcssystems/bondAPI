@@ -3,7 +3,6 @@ package com.bcsystems.bonds.service.impl;
 import com.bcsystems.bonds.domain.*;
 import com.bcsystems.bonds.domain.en.AccionAuditoria;
 import com.bcsystems.bonds.domain.en.TipoMovimiento;
-import com.bcsystems.bonds.domain.en.TipoMultimedia;
 import com.bcsystems.bonds.dto.*;
 import com.bcsystems.bonds.exception.InvalidEntryException;
 import com.bcsystems.bonds.exception.NotFoundException;
@@ -11,20 +10,13 @@ import com.bcsystems.bonds.repository.*;
 import com.bcsystems.bonds.service.AuditoriaService;
 import com.bcsystems.bonds.service.ProductoService;
 import com.bcsystems.bonds.util.CodigoGeneratorService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,7 +24,6 @@ import java.util.stream.Collectors;
 public class ProductoServiceImpl implements ProductoService {
 
     private final ProductoRepository productoRepository;
-    private final ProductoMultimediaRepository multimediaRepository;
     private final SucursalRepository sucursalRepository;
     private final InventarioSucursalRepository inventarioSucursalRepository;
     private final MovimientoStockRepository movimientoStockRepository;
@@ -40,11 +31,7 @@ public class ProductoServiceImpl implements ProductoService {
     private final CodigoGeneratorService codigoGenerator;
     private final AuditoriaService auditoriaService;
 
-    @Value("${app.upload.dir:./uploads/multimedia}")
-    private String uploadDir;
-
     public ProductoServiceImpl(ProductoRepository productoRepository,
-                               ProductoMultimediaRepository multimediaRepository,
                                SucursalRepository sucursalRepository,
                                InventarioSucursalRepository inventarioSucursalRepository,
                                MovimientoStockRepository movimientoStockRepository,
@@ -52,7 +39,6 @@ public class ProductoServiceImpl implements ProductoService {
                                CodigoGeneratorService codigoGenerator,
                                AuditoriaService auditoriaService) {
         this.productoRepository = productoRepository;
-        this.multimediaRepository = multimediaRepository;
         this.sucursalRepository = sucursalRepository;
         this.inventarioSucursalRepository = inventarioSucursalRepository;
         this.movimientoStockRepository = movimientoStockRepository;
@@ -63,15 +49,26 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     public Page<ProductoResponse> listar(String search, Boolean activo, Integer idSucursal, Integer idCategoria, Pageable pageable) {
-        return productoRepository.buscarConFiltros(search, activo, idSucursal, idCategoria, pageable)
-                .map(this::toResponse);
+        Page<Producto> page = productoRepository.buscarConFiltros(search, activo, idSucursal, idCategoria, pageable);
+        List<Integer> ids = page.getContent().stream().map(Producto::getIdProducto).toList();
+        Map<Integer, List<InventarioSucursalProjection>> inventarios = cargarInventarios(null, ids);
+        return page.map(p -> toResponse(p, inventarios.getOrDefault(p.getIdProducto(), List.of())));
     }
 
     @Transactional(readOnly = true)
     @Override
     public Page<ProductoVentaResponse> listarParaVenta(String search, Integer idSucursal, Integer idCategoria, Pageable pageable) {
-        return productoRepository.buscarParaVenta(search, idSucursal, idCategoria, pageable)
-                .map(this::toVentaResponse);
+        Page<ProductoVentaProjection> page = productoRepository.buscarParaVentaProyectado(search, idSucursal, idCategoria, pageable);
+        List<Integer> ids = page.getContent().stream().map(ProductoVentaProjection::idProducto).toList();
+        Map<Integer, List<InventarioSucursalProjection>> inventarios = cargarInventarios(idSucursal, ids);
+        return page.map(p -> toVentaResponse(p, inventarios.getOrDefault(p.idProducto(), List.of())));
+    }
+
+    private Map<Integer, List<InventarioSucursalProjection>> cargarInventarios(Integer idSucursal, Collection<Integer> ids) {
+        if (ids.isEmpty()) return Map.of();
+        return inventarioSucursalRepository.findProyeccionPorIds(idSucursal, ids)
+                .stream()
+                .collect(Collectors.groupingBy(InventarioSucursalProjection::idProducto));
     }
 
     @Transactional(readOnly = true)
@@ -260,96 +257,6 @@ public class ProductoServiceImpl implements ProductoService {
         String usuario = obtenerUsuarioActual();
         auditoriaService.registrar("PRODUCTO", id, AccionAuditoria.ACTUALIZACION.name(), usuario,
                 "Se reactiv\u00f3 el producto: " + producto.getNombre());
-    }
-
-    @Transactional
-    @Override
-    public ProductoResponse agregarMultimedia(Integer idProducto, MultipartFile archivo, Boolean esPrincipal) {
-        Producto producto = buscarOExcepcion(idProducto);
-
-        if (archivo.isEmpty()) {
-            throw new InvalidEntryException("El archivo est\u00e1 vac\u00edo");
-        }
-
-        String contentType = archivo.getContentType();
-        TipoMultimedia tipo;
-        if (contentType != null && contentType.startsWith("video")) {
-            tipo = TipoMultimedia.VIDEO;
-        } else if (contentType != null && contentType.startsWith("image")) {
-            tipo = TipoMultimedia.IMAGEN;
-        } else {
-            throw new InvalidEntryException("El archivo debe ser una imagen o video");
-        }
-
-        try {
-            String extension = Objects.requireNonNull(archivo.getOriginalFilename())
-                    .substring(archivo.getOriginalFilename().lastIndexOf("."));
-            String nombreArchivo = UUID.randomUUID() + extension;
-
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            Path filePath = uploadPath.resolve(nombreArchivo);
-            Files.copy(archivo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            if (Boolean.TRUE.equals(esPrincipal)) {
-                multimediaRepository.findByProductoIdProductoAndEsPrincipalTrue(idProducto)
-                        .ifPresent(m -> {
-                            m.setEsPrincipal(false);
-                            multimediaRepository.save(m);
-                        });
-            }
-
-            ProductoMultimedia multimedia = ProductoMultimedia.builder()
-                    .producto(producto)
-                    .tipo(tipo)
-                    .url("/uploads/" + nombreArchivo)
-                    .nombreArchivo(archivo.getOriginalFilename())
-                    .esPrincipal(esPrincipal != null && esPrincipal)
-                    .build();
-
-            multimediaRepository.save(multimedia);
-
-        } catch (IOException e) {
-            throw new RuntimeException("Error al guardar el archivo: " + e.getMessage());
-        }
-
-        return toResponse(productoRepository.findById(idProducto).orElseThrow());
-    }
-
-    @Transactional
-    @Override
-    public void eliminarMultimedia(Integer idMultimedia) {
-        ProductoMultimedia multimedia = multimediaRepository.findById(idMultimedia)
-                .orElseThrow(() -> new NotFoundException("Multimedia no encontrada"));
-
-        try {
-            Path filePath = Paths.get(uploadDir).resolve(
-                    multimedia.getUrl().replace("/uploads/", ""));
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-        }
-
-        multimediaRepository.delete(multimedia);
-    }
-
-    @Transactional
-    @Override
-    public ProductoResponse marcarMultimediaPrincipal(Integer idProducto, Integer idMultimedia) {
-        multimediaRepository.findByProductoIdProductoAndEsPrincipalTrue(idProducto)
-                .ifPresent(m -> {
-                    m.setEsPrincipal(false);
-                    multimediaRepository.save(m);
-                });
-
-        ProductoMultimedia multimedia = multimediaRepository.findById(idMultimedia)
-                .orElseThrow(() -> new NotFoundException("Multimedia no encontrada"));
-        multimedia.setEsPrincipal(true);
-        multimediaRepository.save(multimedia);
-
-        return toResponse(buscarOExcepcion(idProducto));
     }
 
     @Transactional
@@ -608,40 +515,35 @@ public class ProductoServiceImpl implements ProductoService {
         return auth != null ? auth.getName() : "SISTEMA";
     }
 
-    private ProductoVentaResponse toVentaResponse(Producto p) {
-        List<ProductoVentaResponse.MultimediaResponse> multimedia = p.getMultimedia().stream()
-                .map(m -> new ProductoVentaResponse.MultimediaResponse(
-                        m.getIdMultimedia(), m.getTipo().name(), m.getUrl(),
-                        m.getNombreArchivo(), m.getEsPrincipal()))
-                .collect(Collectors.toList());
-
-        List<ProductoVentaResponse.InventarioSucursalResponse> inventario = p.getInventarioSucursales().stream()
+    private ProductoVentaResponse toVentaResponse(ProductoVentaProjection p, List<InventarioSucursalProjection> inventarios) {
+        List<ProductoVentaResponse.InventarioSucursalResponse> inventario = inventarios.stream()
                 .map(i -> new ProductoVentaResponse.InventarioSucursalResponse(
-                        i.getId(), i.getSucursal().getIdSucursal(),
-                        i.getSucursal().getNombre(), i.getStock(),
-                        i.getStockMinimo(), i.getStockMaximo()))
+                        i.id(), i.idSucursal(), i.sucursalNombre(),
+                        i.stock(), i.stockMinimo(), i.stockMaximo()))
                 .collect(Collectors.toList());
 
         return new ProductoVentaResponse(
-                p.getIdProducto(), p.getSku(), p.getNombre(),
-                p.getPrecioBase(),
-                p.getStockActual(), p.getCostoPromedio(),
-                p.getActivo(), p.getUnidadMedida(), p.getMetrosPorRollo(),
-                multimedia, inventario);
+                p.idProducto(), p.sku(), p.nombre(),
+                p.precioBase(), p.stockActual(), p.costoPromedio(),
+                p.activo(), p.unidadMedida(), p.metrosPorRollo(),
+                inventario);
     }
 
     private ProductoResponse toResponse(Producto p) {
-        List<ProductoResponse.MultimediaResponse> multimedia = p.getMultimedia().stream()
-                .map(m -> new ProductoResponse.MultimediaResponse(
-                        m.getIdMultimedia(), m.getTipo().name(), m.getUrl(),
-                        m.getNombreArchivo(), m.getEsPrincipal()))
+        List<InventarioSucursalProjection> inventarios = p.getInventarioSucursales().stream()
+                .map(i -> new InventarioSucursalProjection(
+                        i.getId(), i.getProducto().getIdProducto(),
+                        i.getSucursal().getIdSucursal(), i.getSucursal().getNombre(),
+                        i.getStock(), i.getStockMinimo(), i.getStockMaximo()))
                 .collect(Collectors.toList());
+        return toResponse(p, inventarios);
+    }
 
-        List<ProductoResponse.InventarioSucursalResponse> inventario = p.getInventarioSucursales().stream()
+    private ProductoResponse toResponse(Producto p, List<InventarioSucursalProjection> inventarios) {
+        List<ProductoResponse.InventarioSucursalResponse> inventario = inventarios.stream()
                 .map(i -> new ProductoResponse.InventarioSucursalResponse(
-                        i.getId(), i.getSucursal().getIdSucursal(),
-                        i.getSucursal().getNombre(), i.getStock(),
-                        i.getStockMinimo(), i.getStockMaximo()))
+                        i.id(), i.idSucursal(), i.sucursalNombre(),
+                        i.stock(), i.stockMinimo(), i.stockMaximo()))
                 .collect(Collectors.toList());
 
         return new ProductoResponse(
@@ -653,6 +555,6 @@ public class ProductoServiceImpl implements ProductoService {
                 p.getCategoria() != null ? p.getCategoria().getNombre() : null,
                 p.getUnidadMedida(), p.getMetrosPorRollo(),
                 p.getActivo(), p.getFechaCreacion(), p.getFechaActualizacion(),
-                multimedia, inventario);
+                inventario);
     }
 }
