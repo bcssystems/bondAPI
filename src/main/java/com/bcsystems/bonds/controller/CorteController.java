@@ -2,9 +2,11 @@ package com.bcsystems.bonds.controller;
 
 import com.bcsystems.bonds.domain.CorteCaja;
 import com.bcsystems.bonds.dto.AbonoCorteDto;
+import com.bcsystems.bonds.dto.AbonoPagoResponse;
 import com.bcsystems.bonds.dto.CorteDetallePagoDto;
 import com.bcsystems.bonds.dto.CorteDetallePagoUpdateRequest;
 import com.bcsystems.bonds.dto.CorteResponse;
+import com.bcsystems.bonds.repository.AbonoPagoRepository;
 import com.bcsystems.bonds.repository.AbonoRepository;
 import com.bcsystems.bonds.repository.CorteCajaRepository;
 import com.bcsystems.bonds.repository.CorteDetallePagoRepository;
@@ -27,15 +29,18 @@ public class CorteController {
     private final CorteCajaRepository corteCajaRepository;
     private final CorteDetallePagoRepository corteDetallePagoRepository;
     private final AbonoRepository abonoRepository;
+    private final AbonoPagoRepository abonoPagoRepository;
     private final CajaService cajaService;
 
     public CorteController(CorteCajaRepository corteCajaRepository,
                            CorteDetallePagoRepository corteDetallePagoRepository,
                            AbonoRepository abonoRepository,
+                           AbonoPagoRepository abonoPagoRepository,
                            CajaService cajaService) {
         this.corteCajaRepository = corteCajaRepository;
         this.corteDetallePagoRepository = corteDetallePagoRepository;
         this.abonoRepository = abonoRepository;
+        this.abonoPagoRepository = abonoPagoRepository;
         this.cajaService = cajaService;
     }
 
@@ -99,7 +104,15 @@ public class CorteController {
                                           + a.getCredito().getCliente().getApellidoPaterno() : null,
                                 a.getFecha(),
                                 a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
-                                a.getMonto()))
+                                a.getMonto(),
+                                abonoPagoRepository.findByAbonoIdAbono(a.getIdAbono()).stream()
+                                        .map(ap -> new AbonoPagoResponse(
+                                                ap.getIdAbonoPago(),
+                                                ap.getTipoPago().getIdTipoPago(),
+                                                ap.getTipoPago().getNombre(),
+                                                ap.getMonto(),
+                                                ap.getReferencia()))
+                                        .toList()))
                         .toList()
                 : java.util.List.of();
 

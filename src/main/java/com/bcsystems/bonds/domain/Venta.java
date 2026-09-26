@@ -60,6 +60,9 @@ public class Venta {
     @Column(length = 500)
     private String motivoCancelacion;
 
+    @Column(length = 30)
+    private String folioPagare;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_solicitante_cancelacion")
     private Persona solicitanteCancelacion;

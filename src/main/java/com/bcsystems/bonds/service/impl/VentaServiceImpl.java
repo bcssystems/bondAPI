@@ -79,6 +79,7 @@ public class VentaServiceImpl implements VentaService {
                 .descuento(request.descuento())
                 .total(request.total())
                 .nota(request.nota())
+                .folioPagare(generarFolioPagaré())
                 .estado(enviandoPedido ? EstadoVenta.ENVIANDO_PEDIDO : EstadoVenta.COMPLETADA)
                 .fecha(LocalDateTime.now())
                 .build();
@@ -686,7 +687,8 @@ public class VentaServiceImpl implements VentaService {
     private String generarFolioPagaré() {
         String prefix = "PAGARE-";
         int num = 1;
-        while (creditoRepository.existsByFolio(prefix + String.format("%05d", num))) {
+        while (creditoRepository.existsByFolio(prefix + String.format("%05d", num))
+                || ventaRepository.existsByFolioPagare(prefix + String.format("%05d", num))) {
             num++;
         }
         return prefix + String.format("%05d", num);
@@ -728,7 +730,7 @@ public class VentaServiceImpl implements VentaService {
                 v.getTipoVenta().name(), v.getPrecioSeleccionado(),
                 v.getSubtotal(), v.getDescuento(), v.getTotal(),
                 v.getEstado().name(), v.getNota(), v.getFecha(), detalleResponses, pagoResponses,
-                credito != null ? credito.getFolio() : null,
+                credito != null && v.getFolioPagare() == null ? credito.getFolio() : v.getFolioPagare(),
                 credito != null ? credito.getPlazoMeses() : null,
                 credito != null ? credito.getPorcentajeInteres() : null,
                 v.getMotivoCancelacion(),

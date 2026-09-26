@@ -1,6 +1,7 @@
 package com.bcsystems.bonds.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record AbonoResponse(
         Integer idAbono,
@@ -9,5 +10,6 @@ public record AbonoResponse(
         String tipo,
         LocalDateTime fecha,
         String usuario,
-        String metodoPago
+        String metodoPago,
+        List<AbonoPagoResponse> pagos
 ) {}

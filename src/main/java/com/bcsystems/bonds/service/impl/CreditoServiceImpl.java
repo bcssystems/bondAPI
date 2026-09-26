@@ -23,6 +23,7 @@ public class CreditoServiceImpl implements CreditoService {
     private final CreditoRepository creditoRepository;
     private final MovimientoCreditoRepository movimientoCreditoRepository;
     private final AbonoRepository abonoRepository;
+    private final AbonoPagoRepository abonoPagoRepository;
     private final ClienteRepository clienteRepository;
     private final PersonaRepository personaRepository;
     private final TipoPagoRepository tipoPagoRepository;
@@ -63,7 +64,7 @@ public class CreditoServiceImpl implements CreditoService {
 
         Persona usuario = obtenerPersonaActual();
         TipoAbono tipo = "LIQUIDACION".equals(request.tipo()) ? TipoAbono.LIQUIDACION : TipoAbono.PARCIAL;
-        TipoPago tipoPago = resolverTipoPago(request.idTipoPago());
+        List<TipoPago> tiposPago = resolverTiposPago(request.pagos(), request.idTipoPago());
         Caja caja = resolverCaja(request.idCaja());
 
         double saldoAnterior = credito.getSaldoPendiente();
@@ -75,10 +76,12 @@ public class CreditoServiceImpl implements CreditoService {
                 .tipo(tipo)
                 .fecha(LocalDateTime.now())
                 .usuario(usuario)
-                .tipoPago(tipoPago)
+                .tipoPago(tiposPago.isEmpty() ? null : tiposPago.get(0))
                 .caja(caja)
                 .build();
         abono = abonoRepository.save(abono);
+
+        guardarPagos(abono, request.pagos(), request.idTipoPago());
 
         registrarIngresoCajaAbono(caja, abono, usuario);
 
@@ -93,7 +96,7 @@ public class CreditoServiceImpl implements CreditoService {
                 .descripcion(tipo == TipoAbono.LIQUIDACION ? "Liquidacion total" : "Abono parcial")
                 .fecha(LocalDateTime.now())
                 .usuario(usuario)
-                .tipoPago(tipoPago)
+                .tipoPago(tiposPago.isEmpty() ? null : tiposPago.get(0))
                 .build();
         movimientoCreditoRepository.save(mov);
 
@@ -108,11 +111,7 @@ public class CreditoServiceImpl implements CreditoService {
         cliente.setSaldoActual(cliente.getSaldoActual() - request.monto());
         clienteRepository.save(cliente);
 
-        return new AbonoResponse(
-                abono.getIdAbono(), abono.getCredito().getIdCredito(),
-                abono.getMonto(), abono.getTipo().name(),
-                abono.getFecha(), usuario.getUsuario(),
-                abono.getTipoPago() != null ? abono.getTipoPago().getNombre() : null);
+        return toAbonoResponse(abono, usuario);
     }
 
     @Override
@@ -135,7 +134,7 @@ public class CreditoServiceImpl implements CreditoService {
         }
 
         Persona usuario = obtenerPersonaActual();
-        TipoPago tipoPago = resolverTipoPago(request.idTipoPago());
+        List<TipoPago> tiposPago = resolverTiposPago(request.pagos(), request.idTipoPago());
         Caja caja = resolverCaja(request.idCaja());
         List<AbonoResponse> resultados = new ArrayList<>();
 
@@ -158,10 +157,12 @@ public class CreditoServiceImpl implements CreditoService {
                     .tipo(tipo)
                     .fecha(LocalDateTime.now())
                     .usuario(usuario)
-                    .tipoPago(tipoPago)
+                    .tipoPago(tiposPago.isEmpty() ? null : tiposPago.get(0))
                     .caja(caja)
                     .build();
             abono = abonoRepository.save(abono);
+
+            guardarPagosProporcional(abono, request.pagos(), request.idTipoPago(), montoAbono, request.monto());
 
             registrarIngresoCajaAbono(caja, abono, usuario);
 
@@ -176,7 +177,7 @@ public class CreditoServiceImpl implements CreditoService {
                     .descripcion("Abono general - distribucion proporcional")
                     .fecha(LocalDateTime.now())
                     .usuario(usuario)
-                    .tipoPago(tipoPago)
+                    .tipoPago(tiposPago.isEmpty() ? null : tiposPago.get(0))
                     .build();
             movimientoCreditoRepository.save(mov);
 
@@ -186,11 +187,7 @@ public class CreditoServiceImpl implements CreditoService {
             }
             creditoRepository.save(credito);
 
-            resultados.add(new AbonoResponse(
-                    abono.getIdAbono(), abono.getCredito().getIdCredito(),
-                    abono.getMonto(), abono.getTipo().name(),
-                    abono.getFecha(), usuario.getUsuario(),
-                    abono.getTipoPago() != null ? abono.getTipoPago().getNombre() : null));
+            resultados.add(toAbonoResponse(abono, usuario));
         }
 
         // Update cliente saldoActual
@@ -206,11 +203,7 @@ public class CreditoServiceImpl implements CreditoService {
                 .orElseThrow(() -> new NotFoundException("Credito no encontrado"));
 
         List<AbonoResponse> abonos = abonoRepository.findByCreditoIdCreditoOrderByFechaDesc(idCredito).stream()
-                .map(a -> new AbonoResponse(
-                        a.getIdAbono(), a.getCredito().getIdCredito(),
-                        a.getMonto(), a.getTipo().name(),
-                        a.getFecha(), a.getUsuario().getUsuario(),
-                        a.getTipoPago() != null ? a.getTipoPago().getNombre() : null))
+                .map(a -> toAbonoResponse(a, a.getUsuario()))
                 .toList();
 
         List<MovimientoCreditoResponse> movimientos = movimientoCreditoRepository
@@ -274,6 +267,90 @@ public class CreditoServiceImpl implements CreditoService {
         }
         return tipoPagoRepository.findById(idTipoPago)
                 .orElseThrow(() -> new NotFoundException("Tipo de pago no encontrado"));
+    }
+
+    private List<TipoPago> resolverTiposPago(List<AbonoPagoRequest> pagos, Integer idTipoPagoLegacy) {
+        if (pagos == null || pagos.isEmpty()) {
+            List<TipoPago> lista = new ArrayList<>();
+            if (idTipoPagoLegacy != null) {
+                lista.add(resolverTipoPago(idTipoPagoLegacy));
+            }
+            return lista;
+        }
+        double suma = pagos.stream().mapToDouble(p -> p.monto() != null ? p.monto() : 0.0).sum();
+        if (Math.abs(suma - 0.0) < 0.000001) {
+            throw new InvalidEntryException("El abono requiere al menos un pago con monto mayor a cero");
+        }
+        return pagos.stream().map(p -> resolverTipoPago(p.idTipoPago())).toList();
+    }
+
+    private List<AbonoPago> guardarPagos(Abono abono, List<AbonoPagoRequest> pagos, Integer idTipoPagoLegacy) {
+        List<AbonoPago> guardados = new ArrayList<>();
+        if (pagos == null || pagos.isEmpty()) {
+            if (idTipoPagoLegacy != null) {
+                guardados.add(abonoPagoRepository.save(AbonoPago.builder()
+                        .abono(abono)
+                        .tipoPago(resolverTipoPago(idTipoPagoLegacy))
+                        .monto(abono.getMonto())
+                        .build()));
+            }
+            return guardados;
+        }
+        double sumaPagos = pagos.stream().mapToDouble(p -> p.monto() != null ? p.monto() : 0.0).sum();
+        if (Math.abs(sumaPagos - abono.getMonto()) > 0.01) {
+            throw new InvalidEntryException("La suma de las formas de pago debe ser igual al monto del abono");
+        }
+        for (AbonoPagoRequest p : pagos) {
+            if (p.monto() == null || p.monto() <= 0) continue;
+            guardados.add(abonoPagoRepository.save(AbonoPago.builder()
+                    .abono(abono)
+                    .tipoPago(resolverTipoPago(p.idTipoPago()))
+                    .monto(p.monto())
+                    .referencia(p.referencia())
+                    .build()));
+        }
+        return guardados;
+    }
+
+    private void guardarPagosProporcional(Abono abono, List<AbonoPagoRequest> pagos,
+                                          Integer idTipoPagoLegacy, double montoAbono, double montoTotal) {
+        if (pagos == null || pagos.isEmpty()) {
+            if (idTipoPagoLegacy != null) {
+                abonoPagoRepository.save(AbonoPago.builder()
+                        .abono(abono)
+                        .tipoPago(resolverTipoPago(idTipoPagoLegacy))
+                        .monto(montoAbono)
+                        .build());
+            }
+            return;
+        }
+        for (AbonoPagoRequest p : pagos) {
+            if (p.monto() == null || p.monto() <= 0) continue;
+            double montoProp = Math.round(p.monto() * montoAbono / montoTotal * 100.0) / 100.0;
+            if (montoProp <= 0) continue;
+            abonoPagoRepository.save(AbonoPago.builder()
+                    .abono(abono)
+                    .tipoPago(resolverTipoPago(p.idTipoPago()))
+                    .monto(montoProp)
+                    .referencia(p.referencia())
+                    .build());
+        }
+    }
+
+    private AbonoResponse toAbonoResponse(Abono a, Persona usuario) {
+        return new AbonoResponse(
+                a.getIdAbono(), a.getCredito().getIdCredito(),
+                a.getMonto(), a.getTipo().name(),
+                a.getFecha(), usuario != null ? usuario.getUsuario() : a.getUsuario().getUsuario(),
+                a.getTipoPago() != null ? a.getTipoPago().getNombre() : null,
+                abonoPagoRepository.findByAbonoIdAbono(a.getIdAbono()).stream()
+                        .map(p -> new AbonoPagoResponse(
+                                p.getIdAbonoPago(),
+                                p.getTipoPago().getIdTipoPago(),
+                                p.getTipoPago().getNombre(),
+                                p.getMonto(),
+                                p.getReferencia()))
+                        .toList());
     }
 
     private Caja resolverCaja(Integer idCaja) {

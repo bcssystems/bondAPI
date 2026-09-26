@@ -21,19 +21,19 @@ public class CajaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('CAJAS_VER')")
+    @PreAuthorize("hasAnyAuthority('CAJAS_VER','VENTAS_CREAR')")
     public ResponseEntity<List<CajaResponse>> listar() {
         return ResponseEntity.ok(cajaService.listar());
     }
 
     @GetMapping("/sucursal/{idSucursal}")
-    @PreAuthorize("hasAuthority('CAJAS_VER')")
+    @PreAuthorize("hasAnyAuthority('CAJAS_VER','VENTAS_CREAR')")
     public ResponseEntity<List<CajaResponse>> listarPorSucursal(@PathVariable Integer idSucursal) {
         return ResponseEntity.ok(cajaService.listarPorSucursal(idSucursal));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('CAJAS_VER')")
+    @PreAuthorize("hasAnyAuthority('CAJAS_VER','VENTAS_CREAR')")
     public ResponseEntity<CajaResponse> obtenerPorId(@PathVariable Integer id) {
         return ResponseEntity.ok(cajaService.obtenerPorId(id));
     }

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface VentaRepository extends JpaRepository<Venta, Integer> {
+    boolean existsByFolioPagare(String folioPagare);
     List<Venta> findByCajaIdCajaAndEstadoOrderByFechaDesc(Integer idCaja, EstadoVenta estado);
     List<Venta> findByCajaIdCajaAndEstadoInOrderByFechaDesc(Integer idCaja, List<EstadoVenta> estados);
     List<Venta> findByCajaIdCajaAndEstadoAndFechaBetweenOrderByFechaDesc(

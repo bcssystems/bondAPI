@@ -32,6 +32,7 @@ public class CajaServiceImpl implements CajaService {
     private final TipoPagoRepository tipoPagoRepository;
     private final GastoRepository gastoRepository;
     private final AbonoRepository abonoRepository;
+    private final AbonoPagoRepository abonoPagoRepository;
 
     @Override
     public List<CajaResponse> listar() {
@@ -258,10 +259,18 @@ public class CajaServiceImpl implements CajaService {
                         java.util.stream.Collectors.summingDouble(VentaPago::getMonto))));
 
         for (Abono a : abonosEnRango) {
-            if (a.getTipoPago() == null) continue;
-            Integer idTipo = a.getTipoPago().getIdTipoPago();
-            montosPorTipo.merge(idTipo, a.getMonto(), Double::sum);
-            tipoPorId.putIfAbsent(idTipo, a.getTipoPago());
+            List<AbonoPago> pagosAbono = abonoPagoRepository.findByAbonoIdAbono(a.getIdAbono());
+            if (!pagosAbono.isEmpty()) {
+                for (AbonoPago ap : pagosAbono) {
+                    Integer idTipo = ap.getTipoPago().getIdTipoPago();
+                    montosPorTipo.merge(idTipo, ap.getMonto(), Double::sum);
+                    tipoPorId.putIfAbsent(idTipo, ap.getTipoPago());
+                }
+            } else if (a.getTipoPago() != null) {
+                Integer idTipo = a.getTipoPago().getIdTipoPago();
+                montosPorTipo.merge(idTipo, a.getMonto(), Double::sum);
+                tipoPorId.putIfAbsent(idTipo, a.getTipoPago());
+            }
         }
 
         List<CorteDetallePagoDto> detallePagos = montosPorTipo.entrySet().stream()
@@ -284,7 +293,15 @@ public class CajaServiceImpl implements CajaService {
                                   + a.getCredito().getCliente().getApellidoPaterno() : null,
                         a.getFecha(),
                         a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
-                        a.getMonto()))
+                        a.getMonto(),
+                        abonoPagoRepository.findByAbonoIdAbono(a.getIdAbono()).stream()
+                                .map(ap -> new AbonoPagoResponse(
+                                        ap.getIdAbonoPago(),
+                                        ap.getTipoPago().getIdTipoPago(),
+                                        ap.getTipoPago().getNombre(),
+                                        ap.getMonto(),
+                                        ap.getReferencia()))
+                                .toList()))
                 .toList();
 
         return new CorteResponse(null, id, caja.getNombre(),
@@ -443,7 +460,15 @@ public class CajaServiceImpl implements CajaService {
                 a.getIdAbono(), idCredito, folio, idCliente, cliente,
                 a.getFecha(),
                 a.getTipoPago() != null ? a.getTipoPago().getNombre() : a.getTipo().name(),
-                a.getMonto());
+                a.getMonto(),
+                abonoPagoRepository.findByAbonoIdAbono(a.getIdAbono()).stream()
+                        .map(ap -> new AbonoPagoResponse(
+                                ap.getIdAbonoPago(),
+                                ap.getTipoPago().getIdTipoPago(),
+                                ap.getTipoPago().getNombre(),
+                                ap.getMonto(),
+                                ap.getReferencia()))
+                        .toList());
     }
 
     private GastoResponse toGastoResponse(Gasto g) {
