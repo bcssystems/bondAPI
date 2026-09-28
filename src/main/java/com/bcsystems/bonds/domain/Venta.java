@@ -75,6 +75,14 @@ public class Venta {
 
     private LocalDateTime fechaAutorizacionCancelacion;
 
+    @Column(length = 4)
+    private String codigoAutorizacion;
+
+    private LocalDateTime fechaGeneracionCodigo;
+
+    @Column(length = 50)
+    private String generoAutorizacion;
+
     @Column(updatable = false)
     private LocalDateTime fecha;
 }

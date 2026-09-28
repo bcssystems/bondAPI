@@ -1,5 +1,7 @@
 package com.bcsystems.bonds.service;
 
+import com.bcsystems.bonds.dto.CancelarVentaRequest;
+import com.bcsystems.bonds.dto.CodigoAutorizacionResponse;
 import com.bcsystems.bonds.dto.VentaEsperaRequest;
 import com.bcsystems.bonds.dto.VentaPagoRequest;
 import com.bcsystems.bonds.dto.VentaRequest;
@@ -15,7 +17,8 @@ public interface VentaService {
     VentaResponse obtenerPorId(Integer id);
     List<VentaResponse> listarPorCaja(Integer idCaja);
     Page<VentaResponse> listar(Integer idSucursal, Integer idCaja, String estado, LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
-    VentaResponse cancelar(Integer id);
+    VentaResponse cancelar(Integer id, CancelarVentaRequest request);
+    CodigoAutorizacionResponse generarCodigo(Integer id);
     VentaResponse solicitarCancelacion(Integer id, String motivo);
     VentaResponse rechazarCancelacion(Integer id);
     VentaResponse ponerEnEspera(Integer id);

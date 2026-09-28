@@ -1,5 +1,7 @@
 package com.bcsystems.bonds.controller;
 
+import com.bcsystems.bonds.dto.CancelarVentaRequest;
+import com.bcsystems.bonds.dto.CodigoAutorizacionResponse;
 import com.bcsystems.bonds.dto.SolicitudCancelacionRequest;
 import com.bcsystems.bonds.dto.VentaEsperaRequest;
 import com.bcsystems.bonds.dto.VentaPagoRequest;
@@ -66,9 +68,16 @@ public class VentaController {
     }
 
     @PostMapping("/{id}/cancelar")
+    @PreAuthorize("hasAnyAuthority('VENTAS_CANCELAR','CANCELACIONES_AUTORIZAR','VENTAS_CREAR')")
+    public ResponseEntity<VentaResponse> cancelar(@PathVariable Integer id,
+                                                  @RequestBody(required = false) CancelarVentaRequest request) {
+        return ResponseEntity.ok(ventaService.cancelar(id, request));
+    }
+
+    @PostMapping("/{id}/generar-codigo")
     @PreAuthorize("hasAnyAuthority('VENTAS_CANCELAR','CANCELACIONES_AUTORIZAR')")
-    public ResponseEntity<VentaResponse> cancelar(@PathVariable Integer id) {
-        return ResponseEntity.ok(ventaService.cancelar(id));
+    public ResponseEntity<CodigoAutorizacionResponse> generarCodigo(@PathVariable Integer id) {
+        return ResponseEntity.ok(ventaService.generarCodigo(id));
     }
 
     @PostMapping("/{id}/solicitar-cancelacion")

@@ -29,5 +29,6 @@ public record VentaResponse(
         String solicitanteCancelacion,
         LocalDateTime fechaSolicitudCancelacion,
         String autorizadorCancelacion,
-        LocalDateTime fechaAutorizacionCancelacion
+        LocalDateTime fechaAutorizacionCancelacion,
+        Boolean codigoGenerado
 ) {}

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -296,7 +297,29 @@ public class VentaServiceImpl implements VentaService {
 
     @Override
     @Transactional
-    public VentaResponse cancelar(Integer id) {
+    public CodigoAutorizacionResponse generarCodigo(Integer id) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
+        if (venta.getEstado() != EstadoVenta.SOLICITADA_CANCELACION) {
+            throw new InvalidEntryException("La venta no tiene una solicitud de cancelacion pendiente");
+        }
+        Persona admin = obtenerPersonaActual();
+        String codigo = String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
+        venta.setCodigoAutorizacion(codigo);
+        venta.setFechaGeneracionCodigo(LocalDateTime.now());
+        venta.setGeneroAutorizacion(admin.getUsuario());
+        venta = ventaRepository.save(venta);
+
+        auditoriaService.registrar("Venta", id, "ACTUALIZACION", admin.getUsuario(),
+                "Codigo de autorizacion generado para la cancelacion de la Venta #" + id);
+
+        LocalDateTime generadoEn = venta.getFechaGeneracionCodigo();
+        return new CodigoAutorizacionResponse(id, codigo, generadoEn, generadoEn.plusMinutes(10));
+    }
+
+    @Override
+    @Transactional
+    public VentaResponse cancelar(Integer id, CancelarVentaRequest request) {
         Venta venta = ventaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Venta no encontrada"));
 
@@ -307,9 +330,36 @@ public class VentaServiceImpl implements VentaService {
         if (venta.getEstado() != EstadoVenta.SOLICITADA_CANCELACION) {
             throw new InvalidEntryException("La venta no tiene una solicitud de cancelacion pendiente");
         }
+
+        boolean tienePermiso = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("VENTAS_CANCELAR")
+                        || a.getAuthority().equals("CANCELACIONES_AUTORIZAR"));
+
+        if (!tienePermiso) {
+            if (request == null || request.codigo() == null || request.codigo().isBlank()) {
+                throw new InvalidEntryException("Ingresa el código de autorización del administrador");
+            }
+            if (venta.getFechaGeneracionCodigo() == null || venta.getCodigoAutorizacion() == null) {
+                throw new InvalidEntryException("No hay código generado. Pídele al administrador generarlo");
+            }
+            if (!request.codigo().trim().equals(venta.getCodigoAutorizacion())) {
+                throw new InvalidEntryException("Código de autorización inválido");
+            }
+            if (venta.getFechaGeneracionCodigo().plusMinutes(10).isBefore(LocalDateTime.now())) {
+                venta.setCodigoAutorizacion(null);
+                venta.setFechaGeneracionCodigo(null);
+                venta.setGeneroAutorizacion(null);
+                ventaRepository.save(venta);
+                throw new InvalidEntryException("El código de autorización expiró. Pide uno nuevo al administrador");
+            }
+        }
+
         venta.setEstado(EstadoVenta.CANCELADA);
         venta.setAutorizadorCancelacion(autorizador);
         venta.setFechaAutorizacionCancelacion(LocalDateTime.now());
+        venta.setCodigoAutorizacion(null);
+        venta.setFechaGeneracionCodigo(null);
+        venta.setGeneroAutorizacion(null);
         venta = ventaRepository.save(venta);
 
         Sucursal sucursal = venta.getCaja().getSucursal();
@@ -737,6 +787,7 @@ public class VentaServiceImpl implements VentaService {
                 v.getSolicitanteCancelacion() != null ? v.getSolicitanteCancelacion().getUsuario() : null,
                 v.getFechaSolicitudCancelacion(),
                 v.getAutorizadorCancelacion() != null ? v.getAutorizadorCancelacion().getUsuario() : null,
-                v.getFechaAutorizacionCancelacion());
+                v.getFechaAutorizacionCancelacion(),
+                v.getFechaGeneracionCodigo() != null);
     }
 }
